@@ -30,6 +30,12 @@
             <artifactId>papyrus-pipeline</artifactId>
         </dependency>
 
+        <!-- Anthropic -->
+        <dependency>
+            <groupId>com.anthropic</groupId>
+            <artifactId>anthropic-java</artifactId>
+        </dependency>
+
         <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

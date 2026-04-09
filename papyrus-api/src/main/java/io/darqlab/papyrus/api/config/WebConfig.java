@@ -9,6 +9,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
+        registry.addViewController("/").setViewName("forward:/search.html");
         registry.addViewController("/ingest").setViewName("forward:/ingest.html");
         registry.addViewController("/search").setViewName("forward:/search.html");
     }

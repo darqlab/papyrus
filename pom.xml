@@ -106,6 +106,11 @@
             </dependency>
             <dependency>
                 <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+                <version>${spring-ai.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-mcp</artifactId>
                 <version>${spring-ai.version}</version>
             </dependency>
@@ -125,6 +130,13 @@
                 <groupId>com.github.docker-java</groupId>
                 <artifactId>docker-java-transport</artifactId>
                 <version>3.5.1</version>
+            </dependency>
+
+            <!-- ── Anthropic Java SDK ──────────────────────────────────────── -->
+            <dependency>
+                <groupId>com.anthropic</groupId>
+                <artifactId>anthropic-java</artifactId>
+                <version>2.17.0</version>
             </dependency>
 
             <!-- ── Test ─────────────────────────────────────────────────── -->
