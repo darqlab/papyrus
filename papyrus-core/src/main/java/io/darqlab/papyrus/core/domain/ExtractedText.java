@@ -1,4 +1,4 @@
-package io.darqlab.papyrus.extractor;
+package io.darqlab.papyrus.core.domain;
 
 import java.util.List;
 

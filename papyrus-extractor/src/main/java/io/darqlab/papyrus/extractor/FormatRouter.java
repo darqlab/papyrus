@@ -1,6 +1,7 @@
 package io.darqlab.papyrus.extractor;
 
 import io.darqlab.papyrus.core.util.MimeTypeDetector;
+import io.darqlab.papyrus.core.domain.ExtractedText;
 import io.darqlab.papyrus.extractor.impl.DigitalPdfExtractor;
 import io.darqlab.papyrus.extractor.impl.HtmlExtractor;
 import io.darqlab.papyrus.extractor.impl.OfficeExtractor;

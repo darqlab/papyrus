@@ -1,6 +1,7 @@
 package io.darqlab.papyrus.extractor;
 
 import java.io.InputStream;
+import io.darqlab.papyrus.core.domain.ExtractedText;
 
 public interface DocumentExtractor {
 

@@ -1,0 +1,36 @@
+papyrus:
+  embedding:
+    provider: voyage
+    voyage:
+      api-key: ${VOYAGE_API_KEY:}
+      model: voyage-3-lite
+    ollama:
+      base-url: http://localhost:11434
+      model: nomic-embed-text
+  chunking:
+    strategy: paragraph
+    max-tokens: 512
+    overlap-tokens: 64
+  search:
+    default-top-k: 5
+
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/papyrus}
+    username: ${DATABASE_USER:papyrus}
+    password: ${DATABASE_PASSWORD:changeme}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  flyway:
+    enabled: true
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

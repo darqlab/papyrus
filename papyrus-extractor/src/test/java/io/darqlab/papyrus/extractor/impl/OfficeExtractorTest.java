@@ -1,6 +1,6 @@
 package io.darqlab.papyrus.extractor.impl;
 
-import io.darqlab.papyrus.extractor.ExtractedText;
+import io.darqlab.papyrus.core.domain.ExtractedText;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.junit.jupiter.api.Test;
 

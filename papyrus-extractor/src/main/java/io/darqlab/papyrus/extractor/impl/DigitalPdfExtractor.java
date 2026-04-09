@@ -2,7 +2,7 @@ package io.darqlab.papyrus.extractor.impl;
 
 import io.darqlab.papyrus.extractor.DocumentExtractor;
 import io.darqlab.papyrus.extractor.ExtractionException;
-import io.darqlab.papyrus.extractor.ExtractedText;
+import io.darqlab.papyrus.core.domain.ExtractedText;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;

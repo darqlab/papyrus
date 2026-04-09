@@ -46,7 +46,7 @@
         <spring-ai.version>1.0.0</spring-ai.version>
 
         <!-- Test -->
-        <testcontainers.version>1.20.3</testcontainers.version>
+        <testcontainers.version>1.21.3</testcontainers.version>
     </properties>
 
     <dependencyManagement>
@@ -108,6 +108,23 @@
                 <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-mcp</artifactId>
                 <version>${spring-ai.version}</version>
+            </dependency>
+
+            <!-- ── docker-java override (fix Docker 29 API version compat) -->
+            <dependency>
+                <groupId>com.github.docker-java</groupId>
+                <artifactId>docker-java-api</artifactId>
+                <version>3.5.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.docker-java</groupId>
+                <artifactId>docker-java-transport-zerodep</artifactId>
+                <version>3.5.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.docker-java</groupId>
+                <artifactId>docker-java-transport</artifactId>
+                <version>3.5.1</version>
             </dependency>
 
             <!-- ── Test ─────────────────────────────────────────────────── -->

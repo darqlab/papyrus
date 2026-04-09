@@ -1,0 +1,24 @@
+papyrus:
+  embedding:
+    provider: voyage
+    voyage:
+      api-key: ${VOYAGE_API_KEY:test-key-not-real}
+      model: voyage-3-lite
+    ollama:
+      base-url: http://localhost:11434
+      model: nomic-embed-text
+  chunking:
+    strategy: paragraph
+    max-tokens: 512
+    overlap-tokens: 64
+  search:
+    default-top-k: 5
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    show-sql: false
+  flyway:
+    enabled: true
