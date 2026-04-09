@@ -7,6 +7,7 @@ import io.darqlab.papyrus.core.util.MimeTypeDetector;
 import io.darqlab.papyrus.core.util.TokenEstimator;
 import io.darqlab.papyrus.extractor.FormatRouter;
 import io.darqlab.papyrus.pipeline.chunking.ChunkingService;
+import io.darqlab.papyrus.pipeline.ocr.OcrCorrectionService;
 import io.darqlab.papyrus.pipeline.store.VectorStoreService;
 import io.darqlab.papyrus.pipeline.store.entity.DocumentSourceEntity;
 import io.darqlab.papyrus.pipeline.store.repository.DocumentSourceRepository;
@@ -17,27 +18,34 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class DocumentService {
+
+    private static final Set<String> IMAGE_MIME_TYPES = Set.of(
+            "image/png", "image/jpeg", "image/tiff", "image/bmp", "image/gif");
 
     private final FormatRouter formatRouter;
     private final ChunkingService chunkingService;
     private final EmbeddingService embeddingService;
     private final VectorStoreService vectorStoreService;
     private final DocumentSourceRepository sourceRepository;
+    private final OcrCorrectionService ocrCorrectionService;
 
     public DocumentService(FormatRouter formatRouter,
                            ChunkingService chunkingService,
                            EmbeddingService embeddingService,
                            VectorStoreService vectorStoreService,
-                           DocumentSourceRepository sourceRepository) {
-        this.formatRouter       = formatRouter;
-        this.chunkingService    = chunkingService;
-        this.embeddingService   = embeddingService;
-        this.vectorStoreService = vectorStoreService;
-        this.sourceRepository   = sourceRepository;
+                           DocumentSourceRepository sourceRepository,
+                           OcrCorrectionService ocrCorrectionService) {
+        this.formatRouter          = formatRouter;
+        this.chunkingService       = chunkingService;
+        this.embeddingService      = embeddingService;
+        this.vectorStoreService    = vectorStoreService;
+        this.sourceRepository      = sourceRepository;
+        this.ocrCorrectionService  = ocrCorrectionService;
     }
 
     @Transactional
@@ -48,11 +56,16 @@ public class DocumentService {
         DocumentSourceEntity source = new DocumentSourceEntity(
                 sourceId, filename, mimeType, (long) content.length,
                 language, IngestionStatus.PROCESSING);
-        sourceRepository.save(source);
-
+        sourceRepository.saveAndFlush(source);
         try {
             ExtractedText extracted = formatRouter.route(
                     new ByteArrayInputStream(content), filename);
+
+            // For image files: apply LLM correction on top of raw Tesseract output
+            if (IMAGE_MIME_TYPES.contains(mimeType) && ocrCorrectionService.isEnabled()) {
+                String corrected = ocrCorrectionService.correct(content, mimeType, extracted.content());
+                extracted = ExtractedText.of(corrected);
+            }
 
             List<String> chunks = chunkingService.chunk(extracted);
 
@@ -121,4 +134,17 @@ public class DocumentService {
     }
 
     public record IngestionResult(UUID sourceId, String filename, int chunkCount) {}
+
+    /**
+     * Extract text from a file without storing anything — used for OCR preview/verification.
+     */
+    public String preview(byte[] content, String filename) {
+        String mimeType = MimeTypeDetector.detect(filename);
+        ExtractedText extracted = formatRouter.route(new ByteArrayInputStream(content), filename);
+
+        if (IMAGE_MIME_TYPES.contains(mimeType) && ocrCorrectionService.isEnabled()) {
+            return ocrCorrectionService.correct(content, mimeType, extracted.content());
+        }
+        return extracted.content();
+    }
 }

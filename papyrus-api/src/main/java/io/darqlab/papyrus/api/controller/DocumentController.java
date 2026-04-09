@@ -98,6 +98,22 @@ public class DocumentController {
     }
 
     /**
+     * Extract text from a file without storing — for OCR preview/verification.
+     * <p>POST /api/documents/preview</p>
+     */
+    @PostMapping(value = "/preview", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<PreviewResponse> preview(
+            @RequestPart("file") MultipartFile file) throws IOException {
+
+        if (file.isEmpty()) return ResponseEntity.badRequest().build();
+
+        String filename = file.getOriginalFilename() != null
+                ? file.getOriginalFilename() : file.getName();
+        String text = documentService.preview(file.getBytes(), filename);
+        return ResponseEntity.ok(new PreviewResponse(filename, text));
+    }
+
+    /**
      * Ingest a document from a URL.
      * <p>POST /api/documents/url</p>
      */

@@ -144,7 +144,7 @@ class DocumentControllerTest {
                 "Papyrus extracts text", 5, null, Instant.now());
         SearchResult result = new SearchResult(chunk, 0.92, "report.pdf");
 
-        when(embeddingService.embed("papyrus")).thenReturn(Collections.nCopies(1024, 0.1f));
+        when(embeddingService.embed("papyrus")).thenReturn(Collections.nCopies(512, 0.1f));
         when(vectorStoreService.searchByVector(any(), eq(5), isNull()))
                 .thenReturn(List.of(result));
 

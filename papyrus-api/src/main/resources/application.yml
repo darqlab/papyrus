@@ -7,6 +7,12 @@ papyrus:
     ollama:
       base-url: http://localhost:11434
       model: nomic-embed-text
+  ocr:
+    correction:
+      enabled: ${OCR_CORRECTION_ENABLED:false}
+      api-key: ${ANTHROPIC_API_KEY:}
+      model: ${OCR_CORRECTION_MODEL:claude-sonnet-4-6}
+
   chunking:
     strategy: paragraph
     max-tokens: 512
