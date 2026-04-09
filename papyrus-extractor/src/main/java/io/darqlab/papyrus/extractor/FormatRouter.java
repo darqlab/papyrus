@@ -2,10 +2,8 @@ package io.darqlab.papyrus.extractor;
 
 import io.darqlab.papyrus.core.util.MimeTypeDetector;
 import io.darqlab.papyrus.core.domain.ExtractedText;
-import io.darqlab.papyrus.extractor.impl.DigitalPdfExtractor;
-import io.darqlab.papyrus.extractor.impl.HtmlExtractor;
-import io.darqlab.papyrus.extractor.impl.OfficeExtractor;
-import io.darqlab.papyrus.extractor.impl.PlainTextExtractor;
+import io.darqlab.papyrus.extractor.impl.*;
+
 
 import java.io.InputStream;
 import java.util.List;
@@ -25,13 +23,17 @@ public class FormatRouter {
     }
 
     /**
-     * Create a router pre-wired with all Phase 1 digital extractors.
+     * Create a router pre-wired with all extractors (Phases 1 + 8).
      */
     public static FormatRouter withDefaultExtractors() {
         return new FormatRouter(List.of(
-                new DigitalPdfExtractor(),
+                new SmartPdfExtractor(),
                 new OfficeExtractor(),
+                new SpreadsheetExtractor(),
+                new PresentationExtractor(),
+                new EpubExtractor(),
                 new HtmlExtractor(),
+                new ImageOcrExtractor(),
                 new PlainTextExtractor()
         ));
     }

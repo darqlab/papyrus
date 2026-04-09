@@ -28,8 +28,8 @@ class FormatRouterTest {
     }
 
     @Test
-    void route_pdf_usesDigitalPdfExtractor() throws IOException {
-        byte[] pdf = buildPdf("Routed via PDF extractor");
+    void route_pdf_usesSmartPdfExtractor() throws IOException {
+        byte[] pdf = buildPdf("Routed via PDF extractor. ".repeat(6));
 
         ExtractedText result = router.route(new ByteArrayInputStream(pdf), "document.pdf");
 
@@ -81,7 +81,7 @@ class FormatRouterTest {
 
     @Test
     void routeByMimeType_pdf_works() throws IOException {
-        byte[] pdf = buildPdf("Direct MIME routing");
+        byte[] pdf = buildPdf("Direct MIME routing via PDF extractor. ".repeat(4));
 
         ExtractedText result = router.routeByMimeType(
                 new ByteArrayInputStream(pdf), "file", "application/pdf");

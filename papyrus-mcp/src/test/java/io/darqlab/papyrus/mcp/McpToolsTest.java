@@ -71,13 +71,15 @@ class McpToolsTest {
                         new PapyrusProperties.VoyageProperties("key", "voyage-3-lite"),
                         new PapyrusProperties.OllamaProperties("http://localhost:11434", "nomic-embed-text")),
                 new PapyrusProperties.ChunkingProperties(ChunkingStrategy.PARAGRAPH, 512, 64),
-                new PapyrusProperties.SearchProperties(5));
+                new PapyrusProperties.SearchProperties(5),
+                new PapyrusProperties.OcrProperties(
+                        new PapyrusProperties.CorrectionProperties(false, null, null)));
 
         ChunkingService chunkingService = new ChunkingService(props);
         FormatRouter formatRouter = FormatRouter.withDefaultExtractors();
 
         EmbeddingService embeddingService = mock(EmbeddingService.class);
-        when(embeddingService.embed(any())).thenReturn(Collections.nCopies(1024, 0.1f));
+        when(embeddingService.embed(any())).thenReturn(Collections.nCopies(512, 0.1f));
 
         AtomicInteger storedCount = new AtomicInteger(0);
         VectorStoreService vectorStore = mock(VectorStoreService.class);
@@ -108,7 +110,9 @@ class McpToolsTest {
                         new PapyrusProperties.VoyageProperties("key", "voyage-3-lite"),
                         new PapyrusProperties.OllamaProperties("http://localhost:11434", "nomic-embed-text")),
                 new PapyrusProperties.ChunkingProperties(ChunkingStrategy.PARAGRAPH, 512, 64),
-                new PapyrusProperties.SearchProperties(5));
+                new PapyrusProperties.SearchProperties(5),
+                new PapyrusProperties.OcrProperties(
+                        new PapyrusProperties.CorrectionProperties(false, null, null)));
 
         ChunkingService chunkingService = new ChunkingService(props);
         FormatRouter formatRouter = FormatRouter.withDefaultExtractors();

@@ -20,7 +20,7 @@ CREATE TABLE document_chunks (
     chunk_index INT         NOT NULL,
     page_number INT,
     content     TEXT        NOT NULL,
-    embedding   vector(1024),
+    embedding   vector(512),
     token_count INT,
     metadata    JSONB,
     created_at  TIMESTAMPTZ DEFAULT now()

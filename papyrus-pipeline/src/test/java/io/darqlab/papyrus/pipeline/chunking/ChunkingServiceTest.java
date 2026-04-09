@@ -17,7 +17,9 @@ class ChunkingServiceTest {
                         new PapyrusProperties.VoyageProperties("key", "voyage-3-lite"),
                         new PapyrusProperties.OllamaProperties("http://localhost:11434", "nomic-embed-text")),
                 new PapyrusProperties.ChunkingProperties(strategy, maxTokens, overlapTokens),
-                new PapyrusProperties.SearchProperties(5)
+                new PapyrusProperties.SearchProperties(5),
+                new PapyrusProperties.OcrProperties(
+                        new PapyrusProperties.CorrectionProperties(false, null, null))
         );
         return new ChunkingService(props);
     }

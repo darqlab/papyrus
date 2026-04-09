@@ -11,7 +11,7 @@ public interface EmbeddingService {
 
     /**
      * The number of dimensions this provider's vectors have.
-     * Voyage AI voyage-3-lite = 1024; Ollama nomic-embed-text = 768.
+     * Voyage AI voyage-3-lite = 512; Ollama nomic-embed-text = 768.
      */
     int getDimensions();
 }

@@ -6,7 +6,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record PapyrusProperties(
         EmbeddingProperties embedding,
         ChunkingProperties chunking,
-        SearchProperties search
+        SearchProperties search,
+        OcrProperties ocr
 ) {
     public record EmbeddingProperties(
             String provider,
@@ -25,4 +26,8 @@ public record PapyrusProperties(
     ) {}
 
     public record SearchProperties(int defaultTopK) {}
+
+    public record OcrProperties(CorrectionProperties correction) {}
+
+    public record CorrectionProperties(boolean enabled, String apiKey, String model) {}
 }

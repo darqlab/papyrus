@@ -44,9 +44,9 @@ class VectorStoreServiceTest {
                 "Voyage AI provides high-quality embeddings for retrieval."
         );
         List<List<Float>> embeddings = List.of(
-                basisVector(1024, 0),
-                basisVector(1024, 1),
-                basisVector(1024, 2)
+                basisVector(512, 0),
+                basisVector(512, 1),
+                basisVector(512, 2)
         );
         List<Integer> tokenCounts = List.of(12, 10, 11);
 
@@ -54,7 +54,7 @@ class VectorStoreServiceTest {
 
         // Search with vector identical to the first chunk's embedding
         List<SearchResult> results = vectorStoreService.searchByVector(
-                basisVector(1024, 0), 3, null);
+                basisVector(512, 0), 3, null);
 
         assertFalse(results.isEmpty());
         // Top result should be the chunk with the most similar vector
@@ -68,16 +68,16 @@ class VectorStoreServiceTest {
 
         vectorStoreService.storeChunks(sourceA,
                 List.of("Content from document A"),
-                List.of(basisVector(1024, 10)),
+                List.of(basisVector(512, 10)),
                 List.of(5), null);
 
         vectorStoreService.storeChunks(sourceB,
                 List.of("Content from document B"),
-                List.of(basisVector(1024, 20)),
+                List.of(basisVector(512, 20)),
                 List.of(5), null);
 
         List<SearchResult> results = vectorStoreService.searchByVector(
-                basisVector(1024, 10), 10, sourceA);
+                basisVector(512, 10), 10, sourceA);
 
         assertTrue(results.stream().allMatch(r -> r.chunk().sourceId().equals(sourceA)),
                 "All results should belong to sourceA");
@@ -98,7 +98,7 @@ class VectorStoreServiceTest {
         UUID sourceId = createSource("delete-me.pdf");
         vectorStoreService.storeChunks(sourceId,
                 List.of("chunk to delete"),
-                List.of(basisVector(1024, 5)),
+                List.of(basisVector(512, 5)),
                 List.of(3), null);
 
         vectorStoreService.deleteBySourceId(sourceId);
@@ -106,7 +106,7 @@ class VectorStoreServiceTest {
         assertTrue(vectorStoreService.listSources(100, 0)
                 .stream().noneMatch(s -> s.id().equals(sourceId)),
                 "Source should be gone after deletion");
-        assertTrue(vectorStoreService.searchByVector(basisVector(1024, 5), 10, sourceId).isEmpty(),
+        assertTrue(vectorStoreService.searchByVector(basisVector(512, 5), 10, sourceId).isEmpty(),
                 "Chunks should be gone after deletion");
     }
 

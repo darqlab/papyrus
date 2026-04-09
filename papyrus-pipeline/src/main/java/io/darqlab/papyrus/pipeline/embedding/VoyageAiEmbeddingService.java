@@ -14,7 +14,7 @@ import java.util.Map;
 public class VoyageAiEmbeddingService implements EmbeddingService {
 
     private static final String VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings";
-    private static final int DIMENSIONS = 1024;
+    private static final int DIMENSIONS = 512;
 
     private final RestClient restClient;
     private final String model;

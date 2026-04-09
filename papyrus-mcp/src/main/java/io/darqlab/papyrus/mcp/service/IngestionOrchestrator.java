@@ -48,7 +48,7 @@ public class IngestionOrchestrator {
         DocumentSourceEntity source = new DocumentSourceEntity(
                 sourceId, filename, mimeType, (long) content.length,
                 language, IngestionStatus.PROCESSING);
-        sourceRepository.save(source);
+        sourceRepository.saveAndFlush(source);
 
         try {
             ExtractedText extracted = formatRouter.route(
