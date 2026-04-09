@@ -159,6 +159,8 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <configuration>
                         <useModulePath>false</useModulePath>
+                        <!-- Allow Mockito/Byte Buddy to run on Java 24+ -->
+                        <argLine>-Dnet.bytebuddy.experimental=true</argLine>
                     </configuration>
                 </plugin>
             </plugins>
