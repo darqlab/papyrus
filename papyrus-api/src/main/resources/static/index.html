@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Papyrus</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f8f9fa; color: #212529; }
+    header { background: #1a1a2e; color: #e0e0e0; padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
+    header h1 { font-size: 1.4rem; font-weight: 600; letter-spacing: .05em; }
+    header span { font-size: .85rem; opacity: .6; }
+    main { max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; display: grid; gap: 2rem; }
+    section { background: #fff; border-radius: 8px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #333; }
+    label { display: block; font-size: .85rem; margin-bottom: .4rem; color: #555; }
+    input[type=file], input[type=text], select, textarea {
+      width: 100%; padding: .5rem .75rem; border: 1px solid #ced4da; border-radius: 6px;
+      font-size: .9rem; outline: none; transition: border-color .15s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: #4361ee; }
+    textarea { resize: vertical; min-height: 80px; }
+    button {
+      background: #4361ee; color: #fff; border: none; border-radius: 6px;
+      padding: .5rem 1.2rem; font-size: .9rem; cursor: pointer; transition: background .15s;
+    }
+    button:hover { background: #3451d1; }
+    button:disabled { background: #a0aec0; cursor: not-allowed; }
+    .row { display: flex; gap: .75rem; align-items: flex-end; }
+    .row > * { flex: 1; }
+    .row > button { flex: 0 0 auto; }
+    #upload-status, #search-status { font-size: .85rem; margin-top: .6rem; min-height: 1.2em; }
+    .ok  { color: #2d6a4f; }
+    .err { color: #c62828; }
+    table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+    th { text-align: left; padding: .5rem .75rem; background: #f1f3f5; font-weight: 600; border-bottom: 2px solid #dee2e6; }
+    td { padding: .5rem .75rem; border-bottom: 1px solid #f1f3f5; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    .badge { display: inline-block; padding: .2em .55em; border-radius: 4px; font-size: .75rem; font-weight: 600; }
+    .badge-done    { background: #d1fae5; color: #065f46; }
+    .badge-failed  { background: #fee2e2; color: #991b1b; }
+    .badge-other   { background: #e0e7ff; color: #3730a3; }
+    .score { font-size: .8rem; color: #6b7280; }
+    .chunk { white-space: pre-wrap; word-break: break-word; max-height: 120px; overflow-y: auto; }
+    #docs-table, #results-table { min-height: 3rem; }
+    .empty { color: #9ca3af; font-size: .875rem; padding: .5rem 0; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Papyrus</h1>
+  <span>Document Intelligence</span>
+</header>
+
+<main>
+
+  <!-- Upload -->
+  <section>
+    <h2>Ingest Document</h2>
+    <div class="row">
+      <div>
+        <label for="file-input">File (PDF, DOCX, TXT, HTML, MD, CSV)</label>
+        <input type="file" id="file-input" accept=".pdf,.docx,.txt,.html,.htm,.md,.csv">
+      </div>
+      <div style="flex:0 0 140px">
+        <label for="lang-input">Language</label>
+        <select id="lang-input">
+          <option value="eng">English</option>
+          <option value="fra">French</option>
+          <option value="deu">German</option>
+          <option value="spa">Spanish</option>
+        </select>
+      </div>
+      <button id="upload-btn" onclick="uploadFile()">Upload</button>
+    </div>
+    <div id="upload-status"></div>
+  </section>
+
+  <!-- Search -->
+  <section>
+    <h2>Semantic Search</h2>
+    <div class="row">
+      <div>
+        <label for="query-input">Query</label>
+        <input type="text" id="query-input" placeholder="What does the document say about...">
+      </div>
+      <div style="flex:0 0 90px">
+        <label for="topk-input">Top K</label>
+        <input type="text" id="topk-input" value="5" style="width:100%">
+      </div>
+      <button id="search-btn" onclick="doSearch()">Search</button>
+    </div>
+    <div id="search-status"></div>
+    <div id="results-table" style="margin-top:1rem"></div>
+  </section>
+
+  <!-- Documents -->
+  <section>
+    <h2>Ingested Documents <button onclick="loadDocs()" style="font-size:.8rem;padding:.25rem .7rem;margin-left:.5rem">Refresh</button></h2>
+    <div id="docs-table"><p class="empty">Loading…</p></div>
+  </section>
+
+</main>
+
+<script>
+  const api = '';
+
+  async function uploadFile() {
+    const fileInput = document.getElementById('file-input');
+    const lang = document.getElementById('lang-input').value;
+    const status = document.getElementById('upload-status');
+    const btn = document.getElementById('upload-btn');
+
+    if (!fileInput.files.length) { status.textContent = 'Select a file first.'; status.className = 'err'; return; }
+
+    const form = new FormData();
+    form.append('file', fileInput.files[0]);
+    form.append('language', lang);
+
+    btn.disabled = true;
+    status.textContent = 'Uploading…';
+    status.className = '';
+
+    try {
+      const res = await fetch(`${api}/api/documents`, { method: 'POST', body: form });
+      const data = await res.json();
+      if (res.ok) {
+        status.textContent = `Ingested "${data.filename}" — ${data.chunkCount} chunks (ID: ${data.sourceId})`;
+        status.className = 'ok';
+        fileInput.value = '';
+        loadDocs();
+      } else {
+        status.textContent = `Error ${res.status}: ${JSON.stringify(data)}`;
+        status.className = 'err';
+      }
+    } catch (e) {
+      status.textContent = `Network error: ${e.message}`;
+      status.className = 'err';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function doSearch() {
+    const query = document.getElementById('query-input').value.trim();
+    const topK  = parseInt(document.getElementById('topk-input').value) || 5;
+    const status = document.getElementById('search-status');
+    const table  = document.getElementById('results-table');
+    const btn    = document.getElementById('search-btn');
+
+    if (!query) { status.textContent = 'Enter a search query.'; status.className = 'err'; return; }
+
+    btn.disabled = true;
+    status.textContent = 'Searching…';
+    status.className = '';
+
+    try {
+      const res = await fetch(`${api}/api/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, topK })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        status.textContent = `${data.length} result(s) for "${query}"`;
+        status.className = 'ok';
+        table.innerHTML = data.length
+          ? renderResults(data)
+          : '<p class="empty">No results found.</p>';
+      } else {
+        status.textContent = `Error ${res.status}`;
+        status.className = 'err';
+        table.innerHTML = '';
+      }
+    } catch (e) {
+      status.textContent = `Network error: ${e.message}`;
+      status.className = 'err';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function renderResults(data) {
+    return `<table><thead><tr><th>#</th><th>Score</th><th>Source</th><th>Content</th></tr></thead><tbody>
+      ${data.map((r, i) => `<tr>
+        <td>${i + 1}</td>
+        <td><span class="score">${(r.score * 100).toFixed(1)}%</span></td>
+        <td style="white-space:nowrap">${esc(r.sourceFilename)}<br><small style="color:#9ca3af">chunk ${r.chunkIndex}</small></td>
+        <td><div class="chunk">${esc(r.content)}</div></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+  }
+
+  async function loadDocs() {
+    const container = document.getElementById('docs-table');
+    try {
+      const res  = await fetch(`${api}/api/documents?limit=100`);
+      const data = await res.json();
+      if (!data.length) { container.innerHTML = '<p class="empty">No documents ingested yet.</p>'; return; }
+      container.innerHTML = `<table><thead><tr><th>Filename</th><th>Type</th><th>Status</th><th>Ingested</th></tr></thead><tbody>
+        ${data.map(d => `<tr>
+          <td>${esc(d.filename)}</td>
+          <td><small>${esc(d.contentType)}</small></td>
+          <td>${badge(d.status)}</td>
+          <td><small>${new Date(d.createdAt).toLocaleString()}</small></td>
+        </tr>`).join('')}
+      </tbody></table>`;
+    } catch (e) {
+      container.innerHTML = `<p class="empty err">Failed to load: ${e.message}</p>`;
+    }
+  }
+
+  function badge(status) {
+    const cls = status === 'DONE' ? 'badge-done' : status === 'FAILED' ? 'badge-failed' : 'badge-other';
+    return `<span class="badge ${cls}">${status}</span>`;
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Enter key triggers search
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('query-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doSearch();
+    });
+    loadDocs();
+  });
+</script>
+</body>
+</html>
