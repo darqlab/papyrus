@@ -93,6 +93,23 @@ class VectorStoreServiceTest {
         assertFalse(sources.isEmpty());
     }
 
+    @Test
+    void deleteBySourceId_removesSourceAndChunks() {
+        UUID sourceId = createSource("delete-me.pdf");
+        vectorStoreService.storeChunks(sourceId,
+                List.of("chunk to delete"),
+                List.of(basisVector(1024, 5)),
+                List.of(3), null);
+
+        vectorStoreService.deleteBySourceId(sourceId);
+
+        assertTrue(vectorStoreService.listSources(100, 0)
+                .stream().noneMatch(s -> s.id().equals(sourceId)),
+                "Source should be gone after deletion");
+        assertTrue(vectorStoreService.searchByVector(basisVector(1024, 5), 10, sourceId).isEmpty(),
+                "Chunks should be gone after deletion");
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private UUID createSource(String filename) {

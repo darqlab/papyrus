@@ -101,6 +101,15 @@ public class VectorStoreService {
     }
 
     /**
+     * Delete all chunks for a source, then delete the source record itself.
+     */
+    @Transactional
+    public void deleteBySourceId(UUID sourceId) {
+        jdbc.update("DELETE FROM document_chunks WHERE source_id = ?", sourceId);
+        sourceRepository.deleteById(sourceId);
+    }
+
+    /**
      * List all document sources as summary views.
      */
     public List<Source> listSources(int limit, int offset) {

@@ -8,6 +8,7 @@ import io.darqlab.papyrus.core.domain.IngestionStatus;
 import io.darqlab.papyrus.core.domain.SearchResult;
 import io.darqlab.papyrus.core.domain.Source;
 import io.darqlab.papyrus.core.service.EmbeddingService;
+import io.darqlab.papyrus.pipeline.job.IngestionJobService;
 import io.darqlab.papyrus.pipeline.store.VectorStoreService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,7 @@ class DocumentControllerTest {
     private DocumentService documentService;
     private VectorStoreService vectorStoreService;
     private EmbeddingService embeddingService;
+    private IngestionJobService jobService;
 
     private final ObjectMapper objectMapper = new ObjectMapper()
             .findAndRegisterModules();  // for Instant serialization
@@ -48,9 +50,10 @@ class DocumentControllerTest {
         documentService    = mock(DocumentService.class);
         vectorStoreService = mock(VectorStoreService.class);
         embeddingService   = mock(EmbeddingService.class);
+        jobService         = mock(IngestionJobService.class);
 
         mvc = MockMvcBuilders.standaloneSetup(
-                new DocumentController(documentService, vectorStoreService))
+                new DocumentController(documentService, vectorStoreService, jobService))
                 .build();
 
         searchMvc = MockMvcBuilders.standaloneSetup(

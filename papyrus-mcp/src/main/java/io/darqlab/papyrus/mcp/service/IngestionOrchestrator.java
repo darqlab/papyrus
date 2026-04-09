@@ -10,10 +10,12 @@ import io.darqlab.papyrus.pipeline.chunking.ChunkingService;
 import io.darqlab.papyrus.pipeline.store.VectorStoreService;
 import io.darqlab.papyrus.pipeline.store.entity.DocumentSourceEntity;
 import io.darqlab.papyrus.pipeline.store.repository.DocumentSourceRepository;
+import org.jsoup.Jsoup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayInputStream;
+import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
@@ -83,6 +85,30 @@ public class IngestionOrchestrator {
             sourceRepository.save(source);
             throw new RuntimeException("Ingestion failed for " + filename + ": " + e.getMessage(), e);
         }
+    }
+
+    @Transactional
+    public IngestionResult ingestUrl(String url, String language) {
+        try {
+            byte[] html = Jsoup.connect(url)
+                    .userAgent("Papyrus/0.1 (+https://github.com/darqlab/papyrus)")
+                    .timeout(15_000)
+                    .execute()
+                    .bodyAsBytes();
+            String filename = URI.create(url).getHost() + ".html";
+            return ingest(html, filename, language);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to fetch URL: " + url + " — " + e.getMessage(), e);
+        }
+    }
+
+    @Transactional
+    public boolean delete(UUID sourceId) {
+        if (!sourceRepository.existsById(sourceId)) {
+            return false;
+        }
+        vectorStoreService.deleteBySourceId(sourceId);
+        return true;
     }
 
     public record IngestionResult(UUID sourceId, int chunkCount) {}
