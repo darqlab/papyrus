@@ -1,0 +1,30 @@
+# Build output
+target/
+*.class
+*.jar
+*.war
+
+# Environment — never commit secrets
+.env
+
+# Maven
+.mvn/
+!.mvn/wrapper/
+maven-wrapper.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test fixtures generated output
+src/test/resources/output/
