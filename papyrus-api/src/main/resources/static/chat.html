@@ -267,25 +267,6 @@
     #char-count { font-size: .75rem; color: #9ca3af; transition: color .15s; }
     #char-count.warn { color: #f59e0b; }
 
-    /* ── Document scope selector ─────────────────────────────────── */
-    #scope-row {
-      max-width: 760px;
-      margin: 0 auto .5rem;
-    }
-    #source-select {
-      width: 100%;
-      padding: .45rem .75rem;
-      border: 1.5px solid #d1d5db;
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: .85rem;
-      color: #374151;
-      background: #f9fafb;
-      outline: none;
-      transition: border-color .15s;
-    }
-    #source-select:focus { border-color: #7c3aed; }
-
     /* ── Sources citations panel ─────────────────────────────────── */
     .sources-panel {
       margin-top: .75rem;
@@ -393,11 +374,6 @@
   </div>
 
   <div id="input-wrap">
-    <div id="scope-row">
-      <select id="source-select" title="Limit chat to one document">
-        <option value="">All documents</option>
-      </select>
-    </div>
     <div id="input-inner">
       <textarea id="msg-input" rows="1" placeholder="Message Papyrus…"></textarea>
       <button id="send-btn" onclick="sendMessage()" title="Send">
@@ -419,7 +395,6 @@
   const sendBtn       = document.getElementById('send-btn');
   const chatWrap      = document.getElementById('chat-wrap');
   const charCount     = document.getElementById('char-count');
-  const sourceSelect  = document.getElementById('source-select');
 
   const GREETING = messagesEl.innerHTML; // save initial greeting HTML
   const history = [];
@@ -576,7 +551,6 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
     charCount.classList.remove('warn');
 
     const needsPdf = wantsPdf(text);
-    const sourceId = sourceSelect.value || null;
 
     appendUser(text);
     history.push({ role: 'user', content: text });
@@ -589,7 +563,7 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history, sourceId })
+        body: JSON.stringify({ messages: history })
       });
 
       if (!res.ok) {
@@ -658,21 +632,6 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
     }
   }
 
-  // ── Document selector ────────────────────────────────────────────
-  async function loadDocuments() {
-    try {
-      const res  = await fetch('/api/documents?limit=200');
-      const docs = await res.json();
-      sourceSelect.innerHTML = '<option value="">All documents</option>';
-      docs.forEach(d => {
-        const opt = document.createElement('option');
-        opt.value = d.id;
-        opt.textContent = d.filename;
-        sourceSelect.appendChild(opt);
-      });
-    } catch (_) {}
-  }
-
   // ── Sources citations panel ──────────────────────────────────────
   function injectSources(bubble, sources) {
     const details = document.createElement('details');
@@ -718,7 +677,6 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
 
   window.addEventListener('DOMContentLoaded', () => {
     inputEl.focus();
-    loadDocuments();
     checkHealth();
     setInterval(checkHealth, 60_000);
   });
