@@ -138,10 +138,34 @@
 
 ---
 
+## UI Improvements — Phase 1 (Quick Wins) ✅
+
+**Completed:** 2026-04-10
+
+### chat.html
+- **New Conversation button** — sidebar button clears all messages and resets `history[]` with a confirmation prompt; re-focuses textarea
+- **Copy button** — appears on hover on each assistant bubble (top-right, `position:absolute`); copies raw Markdown via `navigator.clipboard.writeText()`; shows "Copied!" for 1.5s then restores
+- **Message timestamps** — `makeTimestamp()` appends `<span class="msg-time">` below each bubble at send/render time; right-aligned for user, left-aligned for assistant
+- **Character counter** — live `#char-count` below textarea; turns orange when >2 000 chars; resets to 0 on send
+- **Health indicator dot** — sidebar footer dot polls `/actuator/health` on load and every 60s; green (`health-ok`), amber (`health-warn`), red (`health-err`)
+
+### ingest.html
+- **Drag and drop upload** — `#drag-overlay` (fixed, full-screen, dashed border) shown on `dragenter`; dropped file validated by extension and injected into existing `onFileSelected()` via `DataTransfer` API
+- **Filter and search table** — `#filter-name` (text search) and `#filter-status` (All/Done/Failed/Processing) filter `allDocs` array client-side in real time; "No results" message when empty
+- **Health indicator dot** — identical to `chat.html`
+
+### Infrastructure
+- `WebConfig.java` updated: `/` and `/chat` → `chat.html`, `/ingest` → `ingest.html`; `/search` removed
+- Sidebar layout applied to both pages (replaces previous top-nav header)
+- Rebuilt and redeployed: Maven + Docker image + `docker compose up -d papyrus-api`
+
+---
+
 ## Pending
 
 | Phase | Scope | Status |
 |-------|-------|--------|
+| UI Phase 2 | Delete document, source citations, per-doc chat scope, ingest progress bar | Planned |
 | 7 | Ollama embedding provider | Skipped (user choice) |
 | 9 | Auth (API key / OAuth2) | Planned |
 | 10 | Production hardening (rate limiting, observability) | Planned |
