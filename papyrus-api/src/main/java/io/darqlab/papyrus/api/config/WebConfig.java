@@ -12,5 +12,6 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addViewController("/").setViewName("forward:/chat.html");
         registry.addViewController("/chat").setViewName("forward:/chat.html");
         registry.addViewController("/ingest").setViewName("forward:/ingest.html");
+        registry.addViewController("/documents").setViewName("forward:/documents.html");
     }
 }
