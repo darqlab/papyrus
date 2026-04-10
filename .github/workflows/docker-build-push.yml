@@ -11,7 +11,7 @@ on:
       - master
 
 env:
-  IMAGE_NAME: darqlab/papyrus-api
+  IMAGE_NAME: dennisarq/papyrus-api
 
 jobs:
   build:
