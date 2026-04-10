@@ -71,6 +71,13 @@
     /* ── Content ─────────────────────────────────────────────────── */
     main { max-width: 760px; margin: 2rem auto; padding: 0 1.5rem; display: grid; gap: 1.5rem; }
 
+    /* ── OCR comparison — full width ─────────────────────────────── */
+    #comparison-wrap {
+      display: none;
+      padding: 0 1.5rem 2rem;
+    }
+    #comparison-wrap.visible { display: block; }
+
     section {
       background: #fff; border-radius: 8px; padding: 1.5rem;
       box-shadow: 0 1px 3px rgba(0,0,0,.08);
@@ -120,7 +127,6 @@
     #preview-img   { max-height: 150px; max-width: 100%; border-radius: 6px; border: 1px solid #ced4da; display: block; }
 
     /* Comparison panel */
-    #comparison { display: none; }
     .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem; }
     .compare-pane { display: flex; flex-direction: column; gap: .5rem; }
     .compare-pane h3 { font-size: 1rem; font-weight: 600; color: #333; }
@@ -242,7 +248,12 @@
       </div>
     </section>
 
-    <!-- Step 2+3: OCR Comparison -->
+    </section>
+
+  </main>
+
+  <!-- Step 2+3: OCR Comparison — full width -->
+  <div id="comparison-wrap">
     <section id="comparison" style="padding:2rem">
       <h2 style="font-size:1.2rem;margin-bottom:.4rem">OCR Verification</h2>
       <p style="font-size:.9rem;color:#6b7280;margin-bottom:1rem">
@@ -264,8 +275,8 @@
         <span id="save-status" class="status" style="margin-top:0"></span>
       </div>
     </section>
+  </div>
 
-  </main>
 </div>
 
 <script>
@@ -323,7 +334,7 @@
       document.getElementById('extract-btn').style.display = 'none';
       document.getElementById('direct-btn').style.display  = '';
     }
-    document.getElementById('comparison').style.display = 'none';
+    document.getElementById('comparison-wrap').classList.remove('visible');
     document.getElementById('upload-status').textContent = '';
     setStep(1);
   }
@@ -349,7 +360,7 @@
       imgEl.src   = currentImageUrl;
       textEl.textContent = data.text && data.text.trim() ? data.text : '(No text detected)';
       textEl.className   = 'ocr-text';
-      panel.style.display = 'block';
+      document.getElementById('comparison-wrap').classList.add('visible');
       panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       acceptBtn.disabled = false;
       setStatus(status, 'Text extracted. Review below, then Accept or Discard.', 'ok');
@@ -387,7 +398,7 @@
   }
 
   function discardPreview() {
-    document.getElementById('comparison').style.display = 'none';
+    document.getElementById('comparison-wrap').classList.remove('visible');
     document.getElementById('upload-status').textContent = 'Discarded.';
     pendingText = null; setStep(1);
   }
@@ -467,7 +478,7 @@
     document.getElementById('file-input').value = '';
     document.getElementById('image-preview').style.display = 'none';
     document.getElementById('preview-img').src = '';
-    document.getElementById('comparison').style.display = 'none';
+    document.getElementById('comparison-wrap').classList.remove('visible');
     document.getElementById('extract-btn').style.display = 'none';
     document.getElementById('direct-btn').style.display  = '';
     document.getElementById('direct-btn').disabled        = false;
