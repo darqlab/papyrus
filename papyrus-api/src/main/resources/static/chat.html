@@ -267,6 +267,62 @@
     #char-count { font-size: .75rem; color: #9ca3af; transition: color .15s; }
     #char-count.warn { color: #f59e0b; }
 
+    /* ── Document scope selector ─────────────────────────────────── */
+    #scope-row {
+      max-width: 760px;
+      margin: 0 auto .5rem;
+    }
+    #source-select {
+      width: 100%;
+      padding: .45rem .75rem;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: .85rem;
+      color: #374151;
+      background: #f9fafb;
+      outline: none;
+      transition: border-color .15s;
+    }
+    #source-select:focus { border-color: #7c3aed; }
+
+    /* ── Sources citations panel ─────────────────────────────────── */
+    .sources-panel {
+      margin-top: .75rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: .8rem;
+      color: #6b7280;
+      overflow: hidden;
+    }
+    .sources-panel summary {
+      padding: .45rem .75rem;
+      background: #f9fafb;
+      cursor: pointer;
+      font-weight: 600;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+    }
+    .sources-panel summary::-webkit-details-marker { display: none; }
+    .sources-panel summary::before {
+      content: '▶';
+      font-size: .65rem;
+      transition: transform .15s;
+    }
+    .sources-panel[open] summary::before { transform: rotate(90deg); }
+    .sources-list {
+      padding: .5rem .75rem;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+    }
+    .source-item { line-height: 1.5; }
+    .source-item strong { color: #374151; }
+    .source-excerpt { color: #9ca3af; display: block; }
+
     /* ── Inline PDF button inside bubble ────────────────────────── */
     .bubble-pdf-btn {
       display: inline-flex;
@@ -337,6 +393,11 @@
   </div>
 
   <div id="input-wrap">
+    <div id="scope-row">
+      <select id="source-select" title="Limit chat to one document">
+        <option value="">All documents</option>
+      </select>
+    </div>
     <div id="input-inner">
       <textarea id="msg-input" rows="1" placeholder="Message Papyrus…"></textarea>
       <button id="send-btn" onclick="sendMessage()" title="Send">
@@ -353,11 +414,12 @@
 <script>
   marked.use({ breaks: true, gfm: true });
 
-  const messagesEl = document.getElementById('messages');
-  const inputEl    = document.getElementById('msg-input');
-  const sendBtn    = document.getElementById('send-btn');
-  const chatWrap   = document.getElementById('chat-wrap');
-  const charCount  = document.getElementById('char-count');
+  const messagesEl    = document.getElementById('messages');
+  const inputEl       = document.getElementById('msg-input');
+  const sendBtn       = document.getElementById('send-btn');
+  const chatWrap      = document.getElementById('chat-wrap');
+  const charCount     = document.getElementById('char-count');
+  const sourceSelect  = document.getElementById('source-select');
 
   const GREETING = messagesEl.innerHTML; // save initial greeting HTML
   const history = [];
@@ -514,18 +576,20 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
     charCount.classList.remove('warn');
 
     const needsPdf = wantsPdf(text);
+    const sourceId = sourceSelect.value || null;
 
     appendUser(text);
     history.push({ role: 'user', content: text });
 
     const { bubble, msgEl } = appendAssistant();
     let accumulated = '';
+    let sourcesData = [];
 
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history })
+        body: JSON.stringify({ messages: history, sourceId })
       });
 
       if (!res.ok) {
@@ -556,6 +620,8 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
           const rawData = dataLines.join('\n');
           if (evtName === 'done') {
             done_flag = true;
+          } else if (evtName === 'sources') {
+            try { sourcesData = JSON.parse(rawData); } catch (_) {}
           } else if (evtName === 'error') {
             bubble.innerHTML = `<span style="color:#dc2626">Error: ${esc(JSON.parse(rawData))}</span>`;
             history.pop(); return;
@@ -575,6 +641,8 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
       const copyBtn = makeCopyBtn(() => accumulated);
       bubble.appendChild(copyBtn);
       if (needsPdf) addPdfButton(bubble);
+      // Inject sources citations if present
+      if (sourcesData.length > 0) injectSources(bubble, sourcesData);
       // Add timestamp
       msgEl.appendChild(makeTimestamp());
       scrollBottom();
@@ -588,6 +656,40 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
       sendBtn.disabled = false;
       inputEl.focus();
     }
+  }
+
+  // ── Document selector ────────────────────────────────────────────
+  async function loadDocuments() {
+    try {
+      const res  = await fetch('/api/documents?limit=200');
+      const docs = await res.json();
+      sourceSelect.innerHTML = '<option value="">All documents</option>';
+      docs.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.id;
+        opt.textContent = d.filename;
+        sourceSelect.appendChild(opt);
+      });
+    } catch (_) {}
+  }
+
+  // ── Sources citations panel ──────────────────────────────────────
+  function injectSources(bubble, sources) {
+    const details = document.createElement('details');
+    details.className = 'sources-panel';
+    const summary = document.createElement('summary');
+    summary.textContent = `Sources (${sources.length})`;
+    const list = document.createElement('div');
+    list.className = 'sources-list';
+    sources.forEach(s => {
+      const item = document.createElement('div');
+      item.className = 'source-item';
+      item.innerHTML = `<strong>${esc(s.filename)}</strong><span class="source-excerpt">${esc(s.excerpt)}</span>`;
+      list.appendChild(item);
+    });
+    details.appendChild(summary);
+    details.appendChild(list);
+    bubble.appendChild(details);
   }
 
   // ── Health indicator ─────────────────────────────────────────────
@@ -616,6 +718,7 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
 
   window.addEventListener('DOMContentLoaded', () => {
     inputEl.focus();
+    loadDocuments();
     checkHealth();
     setInterval(checkHealth, 60_000);
   });

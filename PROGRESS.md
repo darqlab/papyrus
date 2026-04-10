@@ -161,11 +161,36 @@
 
 ---
 
+## UI Improvements — Phase 2 (Backend-Dependent Features) ✅
+
+**Completed:** 2026-04-10
+
+### Delete Document (`ingest.html` + backend)
+- `DELETE /api/documents/{id}` and `DocumentService.delete()` were already in place
+- Added Delete button to each row in the documents table; removes row from DOM on 204 without reload
+
+### Source Citations Panel (`chat.html` + `ChatController`)
+- `ChatController` now emits `event: sources` SSE event (JSON `[{filename, excerpt}]`, excerpt ≤200 chars) before `event: done`
+- `chat.html` parses `sources` event and renders a collapsible `<details>` "Sources" panel below each assistant bubble
+- Messages without a `sources` event render unchanged (backwards compatible)
+
+### Per-Document Chat Scope (`chat.html` + `ChatController`)
+- `ChatRequest` record extended with optional `String sourceId`
+- `ChatController` converts `sourceId` to UUID and passes it to `VectorStoreService.searchByVector()`
+- Document selector dropdown in `chat.html` (above textarea) populated from `GET /api/documents` on load
+- Selected `sourceId` included in all chat requests; null = all documents
+
+### Ingest Progress Bar (`ingest.html` + `DocumentController`)
+- `POST /api/documents` made async: creates an `IngestionJob` (total=1), fires a virtual thread for processing, returns `AsyncUploadResponse{jobId, filename, status:"QUEUED"}` (HTTP 202) immediately
+- `ingest.html`: `pollJob()` polls `GET /api/jobs/{id}` every 2s; updates progress bar (`#progress-bar`) width; stops and shows result on `DONE` or `FAILED`
+- Both `uploadDirect()` and `acceptAndSave()` use the polling flow
+
+---
+
 ## Pending
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| UI Phase 2 | Delete document, source citations, per-doc chat scope, ingest progress bar | Planned |
 | 7 | Ollama embedding provider | Skipped (user choice) |
 | 9 | Auth (API key / OAuth2) | Planned |
 | 10 | Production hardening (rate limiting, observability) | Planned |

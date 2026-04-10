@@ -32,11 +32,12 @@ public class DocumentController {
     }
 
     /**
-     * Upload and ingest a document.
+     * Upload and ingest a document asynchronously.
+     * Returns immediately with a jobId that can be polled via GET /api/jobs/{id}.
      * <p>POST /api/documents</p>
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<UploadResponse> upload(
+    public ResponseEntity<AsyncUploadResponse> upload(
             @RequestPart("file") MultipartFile file,
             @RequestParam(value = "language", defaultValue = "eng") String language) throws IOException {
 
@@ -44,13 +45,24 @@ public class DocumentController {
             return ResponseEntity.badRequest().build();
         }
 
-        DocumentService.IngestionResult result = documentService.ingest(
-                file.getBytes(),
-                file.getOriginalFilename() != null ? file.getOriginalFilename() : file.getName(),
-                language);
+        String filename = file.getOriginalFilename() != null ? file.getOriginalFilename() : file.getName();
+        byte[] content  = file.getBytes();
 
-        return ResponseEntity.ok(new UploadResponse(
-                result.sourceId(), result.filename(), result.chunkCount(), "DONE"));
+        IngestionJob job = jobService.createJob(1);
+        jobService.markRunning(job.id());
+
+        Thread.ofVirtual().start(() -> {
+            try {
+                documentService.ingest(content, filename, language);
+                jobService.recordSuccess(job.id());
+                jobService.markDone(job.id());
+            } catch (Exception e) {
+                jobService.recordFailure(job.id());
+                jobService.markFailed(job.id());
+            }
+        });
+
+        return ResponseEntity.accepted().body(new AsyncUploadResponse(job.id(), filename, "QUEUED"));
     }
 
     /**

@@ -6,6 +6,7 @@ import com.anthropic.core.http.StreamResponse;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.RawMessageStreamEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.darqlab.papyrus.core.domain.SearchResult;
 import io.darqlab.papyrus.core.service.EmbeddingService;
 import io.darqlab.papyrus.pipeline.store.VectorStoreService;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,7 +15,11 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @RestController
 public class ChatController {
@@ -60,7 +65,7 @@ public class ChatController {
     }
 
     record ChatMessage(String role, String content) {}
-    record ChatRequest(List<ChatMessage> messages) {}
+    record ChatRequest(List<ChatMessage> messages, String sourceId) {}
 
     @PostMapping(value = "/api/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chat(@RequestBody ChatRequest request) {
@@ -75,13 +80,21 @@ public class ChatController {
                         .findFirst()
                         .orElse("");
 
+                // Parse optional sourceId filter
+                UUID sourceUUID = null;
+                if (request.sourceId() != null && !request.sourceId().isBlank()) {
+                    try { sourceUUID = UUID.fromString(request.sourceId()); }
+                    catch (IllegalArgumentException ignored) {}
+                }
+
+                List<SearchResult> searchResults = List.of();
                 String systemPrompt = SYSTEM;
                 if (!userQuery.isBlank()) {
                     List<Float> vector = embeddingService.embed(userQuery);
-                    var results = vectorStoreService.searchByVector(vector, 5, null);
-                    if (!results.isEmpty()) {
+                    searchResults = vectorStoreService.searchByVector(vector, 5, sourceUUID);
+                    if (!searchResults.isEmpty()) {
                         var ctx = new StringBuilder("\n\n--- Relevant document excerpts ---\n\n");
-                        for (var r : results) {
+                        for (var r : searchResults) {
                             ctx.append("Source: ").append(r.sourceFilename()).append('\n');
                             ctx.append(r.chunk().content()).append("\n\n");
                         }
@@ -116,6 +129,21 @@ public class ChatController {
                                     throw new RuntimeException(ex);
                                 }
                             });
+                }
+
+                // Emit sources before done
+                if (!searchResults.isEmpty()) {
+                    List<Map<String, String>> sources = new ArrayList<>();
+                    for (var r : searchResults) {
+                        Map<String, String> entry = new LinkedHashMap<>();
+                        entry.put("filename", r.sourceFilename());
+                        String excerpt = r.chunk().content();
+                        if (excerpt.length() > 200) excerpt = excerpt.substring(0, 200) + "…";
+                        entry.put("excerpt", excerpt);
+                        sources.add(entry);
+                    }
+                    emitter.send(SseEmitter.event().name("sources")
+                            .data(mapper.writeValueAsString(sources)));
                 }
 
                 emitter.send(SseEmitter.event().name("done").data(""));
