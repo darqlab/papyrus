@@ -14,18 +14,32 @@ import static org.junit.jupiter.api.Assertions.*;
 class ArchiveServiceTest {
 
     @Test
-    void archive_enabled_writesOriginalFileAndText(@TempDir Path tempDir) throws IOException {
+    void archive_enabled_writesFilesWithContentDerivedName(@TempDir Path tempDir) throws IOException {
         ArchiveService service = new ArchiveService(true, tempDir);
         UUID sourceId = UUID.randomUUID();
         byte[] content = "fake image bytes".getBytes(StandardCharsets.UTF_8);
 
-        service.archive(sourceId, "photo.png", content, "Extracted OCR text");
+        service.archive(sourceId, "IMG_001.png", content,
+                "Board Meeting Minutes\nMarch 2024\nAttendees: ...");
 
         Path dir = tempDir.resolve(sourceId.toString());
-        assertTrue(Files.exists(dir.resolve("photo.png")));
-        assertTrue(Files.exists(dir.resolve("photo.txt")));
-        assertArrayEquals(content, Files.readAllBytes(dir.resolve("photo.png")));
-        assertEquals("Extracted OCR text", Files.readString(dir.resolve("photo.txt")));
+        assertTrue(Files.exists(dir.resolve("board-meeting-minutes.png")));
+        assertTrue(Files.exists(dir.resolve("board-meeting-minutes.txt")));
+        assertArrayEquals(content, Files.readAllBytes(dir.resolve("board-meeting-minutes.png")));
+        assertEquals("Board Meeting Minutes\nMarch 2024\nAttendees: ...",
+                Files.readString(dir.resolve("board-meeting-minutes.txt")));
+    }
+
+    @Test
+    void archive_emptyText_fallsBackToOriginalFilename(@TempDir Path tempDir) throws IOException {
+        ArchiveService service = new ArchiveService(true, tempDir);
+        UUID sourceId = UUID.randomUUID();
+
+        service.archive(sourceId, "scan_003.png", "bytes".getBytes(), "  ");
+
+        Path dir = tempDir.resolve(sourceId.toString());
+        assertTrue(Files.exists(dir.resolve("scan_003.png")));
+        assertTrue(Files.exists(dir.resolve("scan_003.txt")));
     }
 
     @Test
@@ -53,34 +67,62 @@ class ArchiveServiceTest {
     }
 
     @Test
-    void archive_filenameWithoutExtension_createsTextFile(@TempDir Path tempDir) throws IOException {
-        ArchiveService service = new ArchiveService(true, tempDir);
-        UUID sourceId = UUID.randomUUID();
-
-        service.archive(sourceId, "noext", "bytes".getBytes(), "text");
-
-        Path dir = tempDir.resolve(sourceId.toString());
-        assertTrue(Files.exists(dir.resolve("noext")));
-        assertTrue(Files.exists(dir.resolve("noext.txt")));
-    }
-
-    @Test
-    void archive_pdfFile_writesOriginalAndText(@TempDir Path tempDir) throws IOException {
+    void archive_pdfFile_writesWithContentName(@TempDir Path tempDir) throws IOException {
         ArchiveService service = new ArchiveService(true, tempDir);
         UUID sourceId = UUID.randomUUID();
         byte[] content = "fake pdf bytes".getBytes(StandardCharsets.UTF_8);
 
-        service.archive(sourceId, "minutes.pdf", content, "Scanned PDF text");
+        service.archive(sourceId, "document.pdf", content,
+                "Resolution No. 2024-05: Budget Approval\nWhereas...");
 
         Path dir = tempDir.resolve(sourceId.toString());
-        assertTrue(Files.exists(dir.resolve("minutes.pdf")));
-        assertTrue(Files.exists(dir.resolve("minutes.txt")));
-        assertEquals("Scanned PDF text", Files.readString(dir.resolve("minutes.txt")));
+        assertTrue(Files.exists(dir.resolve("resolution-no-2024-05-budget-approval.pdf")));
+        assertTrue(Files.exists(dir.resolve("resolution-no-2024-05-budget-approval.txt")));
     }
 
     @Test
     void isEnabled_reflectsConfiguration() {
         assertTrue(new ArchiveService(true, Path.of("/tmp")).isEnabled());
         assertFalse(new ArchiveService(false, Path.of("/tmp")).isEnabled());
+    }
+
+    // ── slugify unit tests ──────────────────────────────────────────────────
+
+    @Test
+    void slugify_normalText_producesCleanSlug() {
+        assertEquals("board-meeting-minutes",
+                ArchiveService.slugify("Board Meeting Minutes\nMore text...", "scan.png"));
+    }
+
+    @Test
+    void slugify_specialCharacters_stripped() {
+        assertEquals("resolution-no-2024-05-budget",
+                ArchiveService.slugify("Resolution No. 2024-05: Budget!!!", "doc.pdf"));
+    }
+
+    @Test
+    void slugify_shortText_fallsBackToFilename() {
+        assertEquals("scan_001",
+                ArchiveService.slugify("Hi", "scan_001.png"));
+    }
+
+    @Test
+    void slugify_emptyText_fallsBackToFilename() {
+        assertEquals("photo",
+                ArchiveService.slugify("", "photo.jpg"));
+    }
+
+    @Test
+    void slugify_longText_truncatesAtWordBoundary() {
+        String longTitle = "This is a very long document title that keeps going and going and really should be truncated at some reasonable point";
+        String slug = ArchiveService.slugify(longTitle, "doc.pdf");
+        assertTrue(slug.length() <= 80, "Slug too long: " + slug.length());
+        assertFalse(slug.endsWith("-"), "Slug should not end with dash");
+    }
+
+    @Test
+    void slugify_blankLines_usesFirstNonBlankLine() {
+        assertEquals("actual-content-here",
+                ArchiveService.slugify("\n\n  \n  Actual Content Here\nMore...", "scan.png"));
     }
 }
