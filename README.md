@@ -86,7 +86,7 @@ mvn -pl papyrus-core test
 
 ```bash
 # Build API fat JAR first
-mvn -pl papyrus-core,papyrus-extractor,papyrus-pipeline,papyrus-api install -DskipTests
+mvn -pl papyrus-core,papyrus-extractor,papyrus-pipeline,papyrus-api,papyrus-mcp install -DskipTests
 
 # Build REST API image
 docker build -t papyrus-api:latest .
@@ -95,40 +95,53 @@ docker build -t papyrus-api:latest .
 docker build -f Dockerfile.mcp -t papyrus-mcp:latest .
 ```
 
-### Docker Compose (recommended)
+### Local Development (build from source)
 
-```yaml
-services:
-  papyrus-db:
-    image: pgvector/pgvector:pg16
-    environment:
-      POSTGRES_DB: papyrus
-      POSTGRES_USER: papyrus
-      POSTGRES_PASSWORD: papyrus
+Papyrus uses a **two-compose** setup locally: the database runs independently so it is never affected when the app is rebuilt.
 
-  papyrus-api:
-    image: papyrus-api:latest
-    ports:
-      - "8081:8080"
-    environment:
-      DATABASE_URL: jdbc:postgresql://papyrus-db:5432/papyrus
-      VOYAGE_API_KEY: ${VOYAGE_API_KEY}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      OCR_CORRECTION_ENABLED: "false"
-      TESSDATA_PREFIX: /usr/share/tessdata
-    depends_on:
-      - papyrus-db
+**Step 1 — Start the standalone pgvector instance (run once, leave running):**
 
-  papyrus-mcp:
-    image: papyrus-mcp:latest
-    ports:
-      - "8082:8080"
-    environment:
-      DATABASE_URL: jdbc:postgresql://papyrus-db:5432/papyrus
-      VOYAGE_API_KEY: ${VOYAGE_API_KEY}
-    depends_on:
-      - papyrus-db
+```bash
+docker compose -f /opt/yard/pgvector/docker-compose.yml up -d
 ```
+
+**Step 2 — Build the JARs and start the app:**
+
+```bash
+# Build JARs
+mvn -pl papyrus-core,papyrus-extractor,papyrus-pipeline,papyrus-api,papyrus-mcp install -DskipTests
+
+# Start (or rebuild) the app
+docker compose -f docker-compose.local.yml up -d --build
+```
+
+**Subsequent rebuilds** (app only, DB keeps running):
+
+```bash
+mvn -pl papyrus-core,papyrus-extractor,papyrus-pipeline,papyrus-api,papyrus-mcp install -DskipTests
+docker compose -f docker-compose.local.yml up -d --build
+```
+
+The `docker-compose.local.yml` in the project root builds images directly from source and connects to the external `papyrus-db` Docker network published by the pgvector stack.
+
+### Environment Variables (`.env`)
+
+Create a `.env` file in the project root (see `.env.example`):
+
+```dotenv
+VOYAGE_API_KEY=your_voyage_key
+ANTHROPIC_API_KEY=your_anthropic_key
+POSTGRES_PASSWORD=your_db_password
+POSTGRES_DB=papyrus
+POSTGRES_USER=papyrus
+OCR_CORRECTION_ENABLED=true
+API_PORT=8081
+MCP_PORT=8082
+```
+
+### Production / Staging
+
+The production stack is managed at `/opt/yard/papyrus/docker-compose.yml` and pulls pre-built images from the registry. The pgvector instance runs as a separate service at `/opt/yard/pgvector/docker-compose.yml` publishing the `papyrus-db` network.
 
 ## REST API
 
@@ -189,8 +202,9 @@ Served by `papyrus-api` at `/`:
 
 | Page | URL | Description |
 |---|---|---|
+| Chat | `/` or `/chat` | AI chat over ingested documents with source citations |
 | Ingest | `/ingest` | Upload documents; 3-step image flow with OCR preview |
-| Search | `/search` | Semantic search with source filter and relevance scores |
+| Documents | `/documents` | List, filter, and delete ingested documents |
 
 ## License
 

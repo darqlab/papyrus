@@ -39,7 +39,8 @@ public class DocumentController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<AsyncUploadResponse> upload(
             @RequestPart("file") MultipartFile file,
-            @RequestParam(value = "language", defaultValue = "eng") String language) throws IOException {
+            @RequestParam(value = "language", defaultValue = "eng") String language,
+            @RequestParam(value = "extractedText", required = false) String extractedText) throws IOException {
 
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().build();
@@ -53,7 +54,7 @@ public class DocumentController {
 
         Thread.ofVirtual().start(() -> {
             try {
-                documentService.ingest(content, filename, language);
+                documentService.ingest(content, filename, language, extractedText);
                 jobService.recordSuccess(job.id());
                 jobService.markDone(job.id());
             } catch (Exception e) {
