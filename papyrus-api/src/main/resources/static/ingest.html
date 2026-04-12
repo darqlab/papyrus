@@ -135,7 +135,14 @@
       flex: 1; background: #f8f9fa; border: 1px solid #ced4da; border-radius: 6px;
       padding: 1rem 1.25rem; font-size: 1rem; white-space: pre-wrap;
       word-break: break-word; overflow-y: auto; max-height: 85vh;
-      line-height: 1.75; min-height: 300px;
+      line-height: 1.75; min-height: 300px; resize: vertical;
+      font-family: inherit; color: #1a1a1a; width: 100%;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .ocr-text:enabled { background: #fff; }
+    .ocr-text:enabled:focus {
+      outline: none; border-color: #4361ee;
+      box-shadow: 0 0 0 3px rgba(67,97,238,.15);
     }
     .ocr-loading { color: #6b7280; font-style: italic; }
 
@@ -265,8 +272,8 @@
           <img id="compare-img" alt="uploaded image">
         </div>
         <div class="compare-pane">
-          <h3>Extracted Text</h3>
-          <div id="compare-text" class="ocr-text ocr-loading">Extracting text…</div>
+          <h3>Extracted Text <span style="font-size:.8rem;font-weight:400;color:#6b7280">— editable</span></h3>
+          <textarea id="compare-text" class="ocr-text ocr-loading" placeholder="Extracting text…" disabled>Extracting text…</textarea>
         </div>
       </div>
       <div class="btn-row" style="margin-top:1.25rem">
@@ -356,14 +363,15 @@
       const res  = await fetch(`${api}/api/documents/preview`, { method: 'POST', body: form });
       const data = await res.json();
       if (!res.ok) { setStatus(status, `Error ${res.status}`, 'err'); btn.disabled = false; return; }
-      pendingText = data.text;
-      imgEl.src   = currentImageUrl;
-      textEl.textContent = data.text && data.text.trim() ? data.text : '(No text detected)';
+      imgEl.src          = currentImageUrl;
+      textEl.value       = data.text && data.text.trim() ? data.text : '';
+      textEl.placeholder = data.text && data.text.trim() ? '' : '(No text detected)';
       textEl.className   = 'ocr-text';
+      textEl.disabled    = false;
       document.getElementById('comparison-wrap').classList.add('visible');
       panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       acceptBtn.disabled = false;
-      setStatus(status, 'Text extracted. Review below, then Accept or Discard.', 'ok');
+      setStatus(status, 'Text extracted. Edit if needed, then Accept or Discard.', 'ok');
       setStep(2);
     } catch (e) {
       setStatus(status, `Network error: ${e.message}`, 'err');
@@ -374,12 +382,16 @@
   async function acceptAndSave() {
     const saveStatus = document.getElementById('save-status');
     const acceptBtn  = document.getElementById('accept-btn');
+    const textEl     = document.getElementById('compare-text');
     const lang       = document.getElementById('lang-input').value;
     if (!currentFile) return;
     acceptBtn.disabled = true; setStatus(saveStatus, 'Saving…', '');
     const form = new FormData();
     form.append('file', currentFile);
     form.append('language', lang);
+    if (textEl && textEl.value.trim()) {
+      form.append('extractedText', textEl.value.trim());
+    }
     try {
       const res  = await fetch(`${api}/api/documents`, { method: 'POST', body: form });
       const data = await res.json();
@@ -400,6 +412,8 @@
   function discardPreview() {
     document.getElementById('comparison-wrap').classList.remove('visible');
     document.getElementById('upload-status').textContent = 'Discarded.';
+    const textEl = document.getElementById('compare-text');
+    textEl.value = ''; textEl.disabled = true; textEl.className = 'ocr-text ocr-loading';
     pendingText = null; setStep(1);
   }
 
