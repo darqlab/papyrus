@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -114,6 +115,8 @@ public class VectorStoreService {
      */
     public List<Source> listSources(int limit, int offset) {
         return sourceRepository.findAll().stream()
+                .sorted(Comparator.comparing(DocumentSourceEntity::getCreatedAt,
+                        Comparator.reverseOrder()))
                 .skip(offset)
                 .limit(limit)
                 .map(e -> new Source(e.getId(), e.getFilename(),

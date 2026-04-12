@@ -71,7 +71,7 @@ public class DocumentController {
      */
     @GetMapping
     public ResponseEntity<List<SourceResponse>> list(
-            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(defaultValue = "50") int limit,
             @RequestParam(defaultValue = "0")  int offset) {
 
         List<SourceResponse> sources = vectorStoreService.listSources(limit, offset)

@@ -195,7 +195,7 @@
   async function loadDocs() {
     const container = document.getElementById('docs-table');
     try {
-      const res = await fetch(`${api}/api/documents?limit=200`);
+      const res = await fetch(`${api}/api/documents?limit=50`);
       allDocs   = await res.json();
       filterDocs();
     } catch (e) {
