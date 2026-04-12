@@ -79,7 +79,7 @@ public class OcrExtractor implements DocumentExtractor {
             }
 
             String content = String.join("\n", pageTexts);
-            return new ExtractedText(content, pageTexts, pageCount);
+            return new ExtractedText(content, pageTexts, pageCount, true);
 
         } catch (IOException e) {
             throw new ExtractionException("OCR extraction failed for: " + filename, e);

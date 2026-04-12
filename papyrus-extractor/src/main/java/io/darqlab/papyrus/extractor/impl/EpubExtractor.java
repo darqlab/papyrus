@@ -44,7 +44,7 @@ public class EpubExtractor implements DocumentExtractor {
             }
 
             String content = String.join("\n\n", chapterTexts);
-            return new ExtractedText(content, chapterTexts, chapterTexts.size());
+            return new ExtractedText(content, chapterTexts, chapterTexts.size(), false);
 
         } catch (IOException e) {
             throw new ExtractionException("Failed to extract text from EPUB: " + filename, e);

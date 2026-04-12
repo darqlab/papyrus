@@ -45,7 +45,11 @@ services:
       VOYAGE_API_KEY:         ${VOYAGE_API_KEY}
       ANTHROPIC_API_KEY:      ${ANTHROPIC_API_KEY:-}
       OCR_CORRECTION_ENABLED: ${OCR_CORRECTION_ENABLED:-false}
+      ARCHIVE_ENABLED:        ${ARCHIVE_ENABLED:-false}
+      ARCHIVE_PATH:           /data/papyrus/archive
       TZ: Asia/Manila
+    volumes:
+      - papyrus_archive:/data/papyrus/archive
     depends_on:
       pgvector:
         condition: service_healthy
@@ -71,7 +75,11 @@ services:
       DB_USER:      ${POSTGRES_USER:-papyrus}
       DB_PASSWORD:  ${POSTGRES_PASSWORD:-papyrus}
       VOYAGE_API_KEY: ${VOYAGE_API_KEY}
+      ARCHIVE_ENABLED: ${ARCHIVE_ENABLED:-false}
+      ARCHIVE_PATH:    /data/papyrus/archive
       TZ: Asia/Manila
+    volumes:
+      - papyrus_archive:/data/papyrus/archive
     depends_on:
       pgvector:
         condition: service_healthy
@@ -86,6 +94,7 @@ services:
 
 volumes:
   pgvector_data_local:
+  papyrus_archive:
 
 networks:
   local:
