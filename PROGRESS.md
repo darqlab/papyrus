@@ -187,10 +187,46 @@
 
 ---
 
+---
+
+## Bug Fixes & Improvements ✅
+
+**Completed:** 2026-04-12
+
+### #6 — Ingested docs list order
+- `VectorStoreService.listSources()` now sorts by `createdAt` DESC (newest first)
+- Default API limit changed from 20 → 50
+- UI fetch limit changed from 200 → 50
+
+### #8 — Chat bubble alignment
+- Added `width: 100%` to `.msg` container so `align-items: flex-end` on user bubbles correctly pushes them to the right
+- User messages right-aligned, assistant messages left-aligned — matches Claude chat layout
+
+---
+
+## Infrastructure — Independent pgvector ✅
+
+**Completed:** 2026-04-12
+
+### Two-compose local development setup
+- `docker-compose.local.yml` — builds `papyrus-api` and `papyrus-mcp` from local source; connects to external `papyrus-db` network
+- `/opt/yard/pgvector/docker-compose.yml` — standalone `pgvector/pgvector:pg16` instance; runs independently, never restarted by app rebuilds
+- Named Docker volume `pgvector_data` for persistent embeddings storage
+- `initdb/01_init.sql` enables `vector` extension and grants schema permissions on first start
+- `.env` / `.env.example` pattern following production hardening guide
+
+### OCR correction enabled by default in local env
+- `OCR_CORRECTION_ENABLED=true` set in local `.env`
+- `.env` added to `.gitignore`
+
+---
+
 ## Pending
 
-| Phase | Scope | Status |
-|-------|-------|--------|
-| 7 | Ollama embedding provider | Skipped (user choice) |
-| 9 | Auth (API key / OAuth2) | Planned |
-| 10 | Production hardening (rate limiting, observability) | Planned |
+| # | Scope | Status |
+|---|-------|--------|
+| #4 | Duplicate entry detection | Planned — plan at `docs/PLAN_DuplicateHandling.md` |
+| #5 | Edit OCR verification text | Planned |
+| #7 | Rename ingested image from content | Planned |
+| — | Auth (API key / OAuth2) | Planned |
+| — | Production hardening (rate limiting, observability) | Planned |
