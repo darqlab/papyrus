@@ -50,6 +50,11 @@ public class DocumentService {
 
     @Transactional
     public IngestionResult ingest(byte[] content, String filename, String language) {
+        return ingest(content, filename, language, null);
+    }
+
+    @Transactional
+    public IngestionResult ingest(byte[] content, String filename, String language, String preExtractedText) {
         String mimeType = MimeTypeDetector.detect(filename);
         UUID sourceId   = UUID.randomUUID();
 
@@ -58,13 +63,17 @@ public class DocumentService {
                 language, IngestionStatus.PROCESSING);
         sourceRepository.saveAndFlush(source);
         try {
-            ExtractedText extracted = formatRouter.route(
-                    new ByteArrayInputStream(content), filename);
-
-            // For image files: apply LLM correction on top of raw Tesseract output
-            if (IMAGE_MIME_TYPES.contains(mimeType) && ocrCorrectionService.isEnabled()) {
-                String corrected = ocrCorrectionService.correct(content, mimeType, extracted.content());
-                extracted = ExtractedText.of(corrected);
+            ExtractedText extracted;
+            if (preExtractedText != null && !preExtractedText.isBlank()) {
+                // Use caller-supplied text (e.g. user-edited OCR output)
+                extracted = ExtractedText.of(preExtractedText);
+            } else {
+                extracted = formatRouter.route(new ByteArrayInputStream(content), filename);
+                // For image files: apply LLM correction on top of raw Tesseract output
+                if (IMAGE_MIME_TYPES.contains(mimeType) && ocrCorrectionService.isEnabled()) {
+                    String corrected = ocrCorrectionService.correct(content, mimeType, extracted.content());
+                    extracted = ExtractedText.of(corrected);
+                }
             }
 
             List<String> chunks = chunkingService.chunk(extracted);
