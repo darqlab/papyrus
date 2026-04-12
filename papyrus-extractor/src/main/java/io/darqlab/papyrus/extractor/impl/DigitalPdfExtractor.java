@@ -31,7 +31,7 @@ public class DigitalPdfExtractor implements DocumentExtractor {
             }
 
             String fullContent = String.join("\n", pageTexts);
-            return new ExtractedText(fullContent, pageTexts, pageCount);
+            return new ExtractedText(fullContent, pageTexts, pageCount, false);
 
         } catch (IOException e) {
             throw new ExtractionException("Failed to extract text from PDF: " + filename, e);

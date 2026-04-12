@@ -27,7 +27,7 @@ class SmartPdfExtractorTest {
     @Test
     void extract_digitalPdfWithDenseText_doesNotInvokeOcr() {
         String denseText = "A".repeat(500);
-        ExtractedText digitalResult = new ExtractedText(denseText, List.of(denseText), 1);
+        ExtractedText digitalResult = new ExtractedText(denseText, List.of(denseText), 1, false);
 
         DigitalPdfExtractor digital = mock(DigitalPdfExtractor.class);
         OcrExtractor ocr            = mock(OcrExtractor.class);
@@ -44,8 +44,8 @@ class SmartPdfExtractorTest {
     @Test
     void extract_scannedPdfWithSparseText_fallsBackToOcr() {
         String sparseText = "hi"; // << 100 chars/page
-        ExtractedText digitalResult = new ExtractedText(sparseText, List.of(sparseText), 1);
-        ExtractedText ocrResult     = new ExtractedText("Full OCR text here.", List.of("Full OCR text here."), 1);
+        ExtractedText digitalResult = new ExtractedText(sparseText, List.of(sparseText), 1, false);
+        ExtractedText ocrResult     = new ExtractedText("Full OCR text here.", List.of("Full OCR text here."), 1, true);
 
         DigitalPdfExtractor digital = mock(DigitalPdfExtractor.class);
         OcrExtractor ocr            = mock(OcrExtractor.class);
@@ -62,8 +62,8 @@ class SmartPdfExtractorTest {
 
     @Test
     void extract_emptyPdf_fallsBackToOcr() {
-        ExtractedText digitalResult = new ExtractedText("", List.of(), 0);
-        ExtractedText ocrResult     = new ExtractedText("", List.of(), 0);
+        ExtractedText digitalResult = new ExtractedText("", List.of(), 0, false);
+        ExtractedText ocrResult     = new ExtractedText("", List.of(), 0, true);
 
         DigitalPdfExtractor digital = mock(DigitalPdfExtractor.class);
         OcrExtractor ocr            = mock(OcrExtractor.class);
@@ -81,7 +81,7 @@ class SmartPdfExtractorTest {
     void threshold_exactlyAtBoundary_usesDigital() {
         // exactly 100 chars/page → digital (>= threshold)
         String text = "A".repeat(100);
-        ExtractedText digitalResult = new ExtractedText(text, List.of(text), 1);
+        ExtractedText digitalResult = new ExtractedText(text, List.of(text), 1, false);
 
         DigitalPdfExtractor digital = mock(DigitalPdfExtractor.class);
         OcrExtractor ocr            = mock(OcrExtractor.class);

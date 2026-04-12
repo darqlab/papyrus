@@ -7,7 +7,8 @@ public record PapyrusProperties(
         EmbeddingProperties embedding,
         ChunkingProperties chunking,
         SearchProperties search,
-        OcrProperties ocr
+        OcrProperties ocr,
+        ArchiveProperties archive
 ) {
     public record EmbeddingProperties(
             String provider,
@@ -30,4 +31,6 @@ public record PapyrusProperties(
     public record OcrProperties(CorrectionProperties correction) {}
 
     public record CorrectionProperties(boolean enabled, String apiKey, String model) {}
+
+    public record ArchiveProperties(boolean enabled, String path) {}
 }

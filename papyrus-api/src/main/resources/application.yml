@@ -13,6 +13,10 @@ papyrus:
       api-key: ${ANTHROPIC_API_KEY:}
       model: ${OCR_CORRECTION_MODEL:claude-sonnet-4-6}
 
+  archive:
+    enabled: ${ARCHIVE_ENABLED:false}
+    path: ${ARCHIVE_PATH:/data/papyrus/archive}
+
   chunking:
     strategy: paragraph
     max-tokens: 512

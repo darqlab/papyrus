@@ -6,6 +6,7 @@ import io.darqlab.papyrus.core.service.EmbeddingService;
 import io.darqlab.papyrus.core.util.MimeTypeDetector;
 import io.darqlab.papyrus.core.util.TokenEstimator;
 import io.darqlab.papyrus.extractor.FormatRouter;
+import io.darqlab.papyrus.pipeline.archive.ArchiveService;
 import io.darqlab.papyrus.pipeline.chunking.ChunkingService;
 import io.darqlab.papyrus.pipeline.store.VectorStoreService;
 import io.darqlab.papyrus.pipeline.store.entity.DocumentSourceEntity;
@@ -27,17 +28,20 @@ public class IngestionOrchestrator {
     private final EmbeddingService embeddingService;
     private final VectorStoreService vectorStoreService;
     private final DocumentSourceRepository sourceRepository;
+    private final ArchiveService archiveService;
 
     public IngestionOrchestrator(FormatRouter formatRouter,
                                  ChunkingService chunkingService,
                                  EmbeddingService embeddingService,
                                  VectorStoreService vectorStoreService,
-                                 DocumentSourceRepository sourceRepository) {
+                                 DocumentSourceRepository sourceRepository,
+                                 ArchiveService archiveService) {
         this.formatRouter       = formatRouter;
         this.chunkingService    = chunkingService;
         this.embeddingService   = embeddingService;
         this.vectorStoreService = vectorStoreService;
         this.sourceRepository   = sourceRepository;
+        this.archiveService     = archiveService;
     }
 
     @Transactional
@@ -53,6 +57,10 @@ public class IngestionOrchestrator {
         try {
             ExtractedText extracted = formatRouter.route(
                     new ByteArrayInputStream(content), filename);
+
+            if (extracted.ocrUsed()) {
+                archiveService.archive(sourceId, filename, content, extracted.content());
+            }
 
             List<String> chunks = chunkingService.chunk(extracted);
 
