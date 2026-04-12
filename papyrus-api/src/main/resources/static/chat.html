@@ -122,9 +122,9 @@
     }
 
     /* ── Message bubbles ─────────────────────────────────────────── */
-    .msg { display: flex; flex-direction: column; gap: .25rem; }
-    .msg.user { align-items: flex-end; }
-    .msg.assistant { align-items: flex-start; }
+    .msg { display: flex; flex-direction: column; gap: .25rem; width: 100%; }
+    .msg.user { align-items: flex-end; padding-right: 12%; }
+    .msg.assistant { align-items: flex-start; padding-left: 0; }
 
     .bubble {
       position: relative;
@@ -170,7 +170,7 @@
     .msg-time {
       font-size: .72rem;
       color: #9ca3af;
-      padding: 0 .4rem;
+      padding: 0 .4rem .2rem;
     }
 
     /* Markdown styles inside assistant bubble */
@@ -467,8 +467,8 @@
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
     bubble.textContent = text;
-    div.appendChild(bubble);
     div.appendChild(makeTimestamp());
+    div.appendChild(bubble);
     messagesEl.appendChild(div);
     scrollBottom();
   }
@@ -617,8 +617,8 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
       if (needsPdf) addPdfButton(bubble);
       // Inject sources citations if present
       if (sourcesData.length > 0) injectSources(bubble, sourcesData);
-      // Add timestamp
-      msgEl.appendChild(makeTimestamp());
+      // Add timestamp above the bubble
+      msgEl.insertBefore(makeTimestamp(), bubble);
       scrollBottom();
       history.push({ role: 'assistant', content: accumulated });
 
