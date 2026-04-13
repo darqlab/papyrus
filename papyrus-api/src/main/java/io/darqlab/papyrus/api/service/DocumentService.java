@@ -6,6 +6,7 @@ import io.darqlab.papyrus.core.service.EmbeddingService;
 import io.darqlab.papyrus.core.util.MimeTypeDetector;
 import io.darqlab.papyrus.core.util.TokenEstimator;
 import io.darqlab.papyrus.extractor.FormatRouter;
+import io.darqlab.papyrus.pipeline.archive.ArchiveService;
 import io.darqlab.papyrus.pipeline.chunking.ChunkingService;
 import io.darqlab.papyrus.pipeline.ocr.OcrCorrectionService;
 import io.darqlab.papyrus.pipeline.store.VectorStoreService;
@@ -33,19 +34,22 @@ public class DocumentService {
     private final VectorStoreService vectorStoreService;
     private final DocumentSourceRepository sourceRepository;
     private final OcrCorrectionService ocrCorrectionService;
+    private final ArchiveService archiveService;
 
     public DocumentService(FormatRouter formatRouter,
                            ChunkingService chunkingService,
                            EmbeddingService embeddingService,
                            VectorStoreService vectorStoreService,
                            DocumentSourceRepository sourceRepository,
-                           OcrCorrectionService ocrCorrectionService) {
+                           OcrCorrectionService ocrCorrectionService,
+                           ArchiveService archiveService) {
         this.formatRouter          = formatRouter;
         this.chunkingService       = chunkingService;
         this.embeddingService      = embeddingService;
         this.vectorStoreService    = vectorStoreService;
         this.sourceRepository      = sourceRepository;
         this.ocrCorrectionService  = ocrCorrectionService;
+        this.archiveService        = archiveService;
     }
 
     @Transactional
@@ -65,8 +69,9 @@ public class DocumentService {
         try {
             ExtractedText extracted;
             if (preExtractedText != null && !preExtractedText.isBlank()) {
-                // Use caller-supplied text (e.g. user-edited OCR output)
-                extracted = ExtractedText.of(preExtractedText);
+                // User-edited OCR output — still counts as OCR for archiving
+                boolean isOcrSource = IMAGE_MIME_TYPES.contains(mimeType);
+                extracted = isOcrSource ? ExtractedText.ofOcr(preExtractedText) : ExtractedText.of(preExtractedText);
             } else {
                 extracted = formatRouter.route(new ByteArrayInputStream(content), filename);
                 // For image files: apply LLM correction on top of raw Tesseract output
@@ -74,6 +79,10 @@ public class DocumentService {
                     String corrected = ocrCorrectionService.correct(content, mimeType, extracted.content());
                     extracted = ExtractedText.of(corrected);
                 }
+            }
+
+            if (extracted.ocrUsed()) {
+                archiveService.archive(sourceId, filename, content, extracted.content());
             }
 
             List<String> chunks = chunkingService.chunk(extracted);

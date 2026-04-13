@@ -7,6 +7,8 @@ papyrus:
     ollama:
       base-url: http://localhost:11434
       model: nomic-embed-text
+  archive:
+    enabled: false
   chunking:
     strategy: paragraph
     max-tokens: 512

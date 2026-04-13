@@ -8,6 +8,7 @@ import io.darqlab.papyrus.extractor.FormatRouter;
 import io.darqlab.papyrus.mcp.service.IngestionOrchestrator;
 import io.darqlab.papyrus.mcp.tool.IngestTools;
 import io.darqlab.papyrus.mcp.tool.SearchTools;
+import io.darqlab.papyrus.pipeline.archive.ArchiveService;
 import io.darqlab.papyrus.pipeline.chunking.ChunkingService;
 import io.darqlab.papyrus.pipeline.config.ChunkingStrategy;
 import io.darqlab.papyrus.pipeline.config.PapyrusProperties;
@@ -73,7 +74,8 @@ class McpToolsTest {
                 new PapyrusProperties.ChunkingProperties(ChunkingStrategy.PARAGRAPH, 512, 64),
                 new PapyrusProperties.SearchProperties(5),
                 new PapyrusProperties.OcrProperties(
-                        new PapyrusProperties.CorrectionProperties(false, null, null)));
+                        new PapyrusProperties.CorrectionProperties(false, null, null)),
+                new PapyrusProperties.ArchiveProperties(false, null, null));
 
         ChunkingService chunkingService = new ChunkingService(props);
         FormatRouter formatRouter = FormatRouter.withDefaultExtractors();
@@ -89,8 +91,9 @@ class McpToolsTest {
         DocumentSourceRepository sourceRepo = mock(DocumentSourceRepository.class);
         when(sourceRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
+        ArchiveService archiveService = new ArchiveService(props);
         IngestionOrchestrator orchestrator = new IngestionOrchestrator(
-                formatRouter, chunkingService, embeddingService, vectorStore, sourceRepo);
+                formatRouter, chunkingService, embeddingService, vectorStore, sourceRepo, archiveService);
 
         byte[] content = "Hello Papyrus.\n\nThis is a test document for ingestion pipeline testing.".getBytes();
         IngestionOrchestrator.IngestionResult result = orchestrator.ingest(content, "test.txt", "eng");
@@ -112,7 +115,8 @@ class McpToolsTest {
                 new PapyrusProperties.ChunkingProperties(ChunkingStrategy.PARAGRAPH, 512, 64),
                 new PapyrusProperties.SearchProperties(5),
                 new PapyrusProperties.OcrProperties(
-                        new PapyrusProperties.CorrectionProperties(false, null, null)));
+                        new PapyrusProperties.CorrectionProperties(false, null, null)),
+                new PapyrusProperties.ArchiveProperties(false, null, null));
 
         ChunkingService chunkingService = new ChunkingService(props);
         FormatRouter formatRouter = FormatRouter.withDefaultExtractors();
@@ -121,8 +125,9 @@ class McpToolsTest {
         DocumentSourceRepository sourceRepo = mock(DocumentSourceRepository.class);
         when(sourceRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
+        ArchiveService archiveService = new ArchiveService(props);
         IngestionOrchestrator orchestrator = new IngestionOrchestrator(
-                formatRouter, chunkingService, mock(EmbeddingService.class), vectorStore, sourceRepo);
+                formatRouter, chunkingService, mock(EmbeddingService.class), vectorStore, sourceRepo, archiveService);
 
         byte[] content = "   ".getBytes();
         IngestionOrchestrator.IngestionResult result = orchestrator.ingest(content, "empty.txt", "eng");
