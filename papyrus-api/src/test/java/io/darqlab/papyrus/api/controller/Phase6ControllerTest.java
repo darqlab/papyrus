@@ -5,6 +5,7 @@ import io.darqlab.papyrus.api.controller.dto.UrlIngestRequest;
 import io.darqlab.papyrus.api.service.DocumentService;
 import io.darqlab.papyrus.core.domain.IngestionJob;
 import io.darqlab.papyrus.core.domain.JobStatus;
+import io.darqlab.papyrus.pipeline.archive.ArchiveService;
 import io.darqlab.papyrus.pipeline.job.IngestionJobService;
 import io.darqlab.papyrus.pipeline.store.VectorStoreService;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,7 +48,7 @@ class Phase6ControllerTest {
         jobService         = mock(IngestionJobService.class);
 
         docMvc = MockMvcBuilders.standaloneSetup(
-                new DocumentController(documentService, vectorStoreService, jobService))
+                new DocumentController(documentService, vectorStoreService, jobService, mock(ArchiveService.class)))
                 .build();
 
         jobMvc = MockMvcBuilders.standaloneSetup(

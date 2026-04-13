@@ -4,10 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.darqlab.papyrus.api.controller.dto.SearchRequest;
 import io.darqlab.papyrus.api.service.DocumentService;
 import io.darqlab.papyrus.core.domain.DocumentChunk;
+import io.darqlab.papyrus.core.domain.IngestionJob;
 import io.darqlab.papyrus.core.domain.IngestionStatus;
+import io.darqlab.papyrus.core.domain.JobStatus;
 import io.darqlab.papyrus.core.domain.SearchResult;
 import io.darqlab.papyrus.core.domain.Source;
 import io.darqlab.papyrus.core.service.EmbeddingService;
+import io.darqlab.papyrus.pipeline.archive.ArchiveService;
 import io.darqlab.papyrus.pipeline.job.IngestionJobService;
 import io.darqlab.papyrus.pipeline.store.VectorStoreService;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,7 +56,7 @@ class DocumentControllerTest {
         jobService         = mock(IngestionJobService.class);
 
         mvc = MockMvcBuilders.standaloneSetup(
-                new DocumentController(documentService, vectorStoreService, jobService))
+                new DocumentController(documentService, vectorStoreService, jobService, mock(ArchiveService.class)))
                 .build();
 
         searchMvc = MockMvcBuilders.standaloneSetup(
@@ -64,19 +67,20 @@ class DocumentControllerTest {
     // ── POST /api/documents ───────────────────────────────────────────────────
 
     @Test
-    void upload_validFile_returns200WithResult() throws Exception {
-        UUID sourceId = UUID.randomUUID();
-        when(documentService.ingest(any(), eq("report.txt"), eq("eng")))
-                .thenReturn(new DocumentService.IngestionResult(sourceId, "report.txt", 5));
+    void upload_validFile_returns202WithJobId() throws Exception {
+        UUID jobId = UUID.randomUUID();
+        IngestionJob job = new IngestionJob(jobId, io.darqlab.papyrus.core.domain.JobStatus.RUNNING,
+                1, 0, 0, java.time.Instant.now(), java.time.Instant.now());
+        when(jobService.createJob(1)).thenReturn(job);
 
         MockMultipartFile file = new MockMultipartFile(
                 "file", "report.txt", "text/plain", "Hello Papyrus".getBytes());
 
         mvc.perform(multipart("/api/documents").file(file))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.sourceId").value(sourceId.toString()))
-                .andExpect(jsonPath("$.chunkCount").value(5))
-                .andExpect(jsonPath("$.status").value("DONE"));
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.jobId").value(jobId.toString()))
+                .andExpect(jsonPath("$.filename").value("report.txt"))
+                .andExpect(jsonPath("$.status").value("QUEUED"));
     }
 
     @Test
@@ -93,9 +97,9 @@ class DocumentControllerTest {
     @Test
     void listDocuments_returnsSources() throws Exception {
         UUID id = UUID.randomUUID();
-        Source source = new Source(id, "doc.pdf", "application/pdf",
+        Source source = new Source(id, "doc.pdf", null, null, "application/pdf",
                 IngestionStatus.DONE, Instant.now());
-        when(vectorStoreService.listSources(20, 0)).thenReturn(List.of(source));
+        when(vectorStoreService.listSources(anyInt(), eq(0))).thenReturn(List.of(source));
 
         mvc.perform(get("/api/documents"))
                 .andExpect(status().isOk())
@@ -118,9 +122,9 @@ class DocumentControllerTest {
     @Test
     void getDocument_found_returns200() throws Exception {
         UUID id = UUID.randomUUID();
-        Source source = new Source(id, "doc.pdf", "application/pdf",
+        Source source = new Source(id, "doc.pdf", null, null, "application/pdf",
                 IngestionStatus.DONE, Instant.now());
-        when(vectorStoreService.listSources(Integer.MAX_VALUE, 0)).thenReturn(List.of(source));
+        when(vectorStoreService.findById(id)).thenReturn(source);
 
         mvc.perform(get("/api/documents/" + id))
                 .andExpect(status().isOk())
@@ -129,7 +133,7 @@ class DocumentControllerTest {
 
     @Test
     void getDocument_notFound_returns404() throws Exception {
-        when(vectorStoreService.listSources(anyInt(), anyInt())).thenReturn(List.of());
+        when(vectorStoreService.findById(any())).thenReturn(null);
 
         mvc.perform(get("/api/documents/" + UUID.randomUUID()))
                 .andExpect(status().isNotFound());
@@ -142,7 +146,7 @@ class DocumentControllerTest {
         UUID sourceId = UUID.randomUUID();
         DocumentChunk chunk = new DocumentChunk(UUID.randomUUID(), sourceId, 0, null,
                 "Papyrus extracts text", 5, null, Instant.now());
-        SearchResult result = new SearchResult(chunk, 0.92, "report.pdf");
+        SearchResult result = new SearchResult(chunk, 0.92, "report.pdf", null);
 
         when(embeddingService.embed("papyrus")).thenReturn(Collections.nCopies(512, 0.1f));
         when(vectorStoreService.searchByVector(any(), eq(5), isNull()))

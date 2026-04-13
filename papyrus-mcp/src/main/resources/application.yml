@@ -44,8 +44,9 @@ papyrus:
     enabled: ${ARCHIVE_ENABLED:false}
     path: ${ARCHIVE_PATH:/data/papyrus/archive}
     abbreviations:
-      "executive committee": execomm
-      "western mindanao mission": wmm
+      "[minutes of the meeting of]": ""
+      "[executive committee]": execomm
+      "[western mindanao mission]": wmm
   chunking:
     strategy: ${CHUNKING_STRATEGY:PARAGRAPH}
     max-tokens: ${CHUNKING_MAX_TOKENS:512}

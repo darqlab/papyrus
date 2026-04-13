@@ -95,7 +95,8 @@ public class ChatController {
                     if (!searchResults.isEmpty()) {
                         var ctx = new StringBuilder("\n\n--- Relevant document excerpts ---\n\n");
                         for (var r : searchResults) {
-                            ctx.append("Source: ").append(r.sourceFilename()).append('\n');
+                            String label = r.archiveFilename() != null ? r.archiveFilename() : r.sourceFilename();
+                            ctx.append("Source: ").append(label).append('\n');
                             ctx.append(r.chunk().content()).append("\n\n");
                         }
                         ctx.append("--- End of excerpts ---");
@@ -136,7 +137,9 @@ public class ChatController {
                     List<Map<String, String>> sources = new ArrayList<>();
                     for (var r : searchResults) {
                         Map<String, String> entry = new LinkedHashMap<>();
-                        entry.put("filename", r.sourceFilename());
+                        entry.put("sourceId", r.chunk().sourceId().toString());
+                        entry.put("filename", r.archiveFilename() != null ? r.archiveFilename() : r.sourceFilename());
+                        entry.put("archiveFilename", r.archiveFilename());
                         String excerpt = r.chunk().content();
                         if (excerpt.length() > 200) excerpt = excerpt.substring(0, 200) + "…";
                         entry.put("excerpt", excerpt);
