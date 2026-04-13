@@ -23,10 +23,9 @@ import java.util.regex.Pattern;
  *
  * <p>When enabled, creates a directory per source ID under the configured base path
  * and writes both the original file and a {@code .txt} file with the extracted text.
- * Filenames follow the convention {@code {date}_{page}_{content-slug}.{ext}} where
- * the date and page number are extracted from the OCR text.
+ * Filenames are derived from the extracted text content so they are human-readable.
  *
- * <p>Archiving is best-effort - failures are logged but never propagate to the caller,
+ * <p>Archiving is best-effort — failures are logged but never propagate to the caller,
  * so the main ingestion pipeline is never blocked by archive I/O issues.
  */
 @Service
@@ -97,6 +96,10 @@ public class ArchiveService {
 
     /**
      * Archive the original file and its extracted text.
+     *
+     * <p>Creates a directory {@code {basePath}/{sourceId}/} and writes the original
+     * file and a {@code .txt} file. Both are named with a slug derived from the
+     * extracted text content so they are meaningful at a glance.
      *
      * @param sourceId      the document source ID (used as directory name)
      * @param filename      the original filename (e.g. "scan_001.png")
