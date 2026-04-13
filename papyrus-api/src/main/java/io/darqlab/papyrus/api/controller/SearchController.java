@@ -43,6 +43,7 @@ public class SearchController {
                         r.score(),
                         r.chunk().sourceId(),
                         r.sourceFilename(),
+                        r.archiveFilename(),
                         r.chunk().chunkIndex()))
                 .toList();
 

@@ -13,6 +13,14 @@ papyrus:
       api-key: ${ANTHROPIC_API_KEY:}
       model: ${OCR_CORRECTION_MODEL:claude-sonnet-4-6}
 
+  archive:
+    enabled: ${ARCHIVE_ENABLED:false}
+    path: ${ARCHIVE_PATH:/data/papyrus/archive}
+    abbreviations:
+      "[minutes of the meeting of]": ""
+      "[executive committee]": execomm
+      "[western mindanao mission]": wmm
+
   chunking:
     strategy: paragraph
     max-tokens: 512
@@ -21,6 +29,10 @@ papyrus:
     default-top-k: 5
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/papyrus}
     username: ${DATABASE_USER:papyrus}

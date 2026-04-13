@@ -11,7 +11,8 @@ on:
       - master
 
 env:
-  IMAGE_NAME: dennisarq/papyrus-api
+  API_IMAGE: dennisarq/papyrus-api
+  MCP_IMAGE: dennisarq/papyrus-mcp
 
 jobs:
   build:
@@ -21,17 +22,17 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v4.7.0
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Build JAR with Maven
-        run: mvn -pl papyrus-core,papyrus-extractor,papyrus-pipeline,papyrus-api install -DskipTests -q
+      - name: Build JARs with Maven
+        run: mvn -pl papyrus-core,papyrus-extractor,papyrus-pipeline,papyrus-api,papyrus-mcp install -DskipTests -q
 
       - name: Log in to Docker Hub
         if: github.event_name == 'push'
@@ -40,28 +41,62 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Set up QEMU (for arm64 cross-build)
+        if: github.event_name == 'push'
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         if: github.event_name == 'push'
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push :staging
+      # ── API image ──────────────────────────────────────────────────────
+
+      - name: Build and push API :staging
         if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ env.IMAGE_NAME }}:staging
+          tags: ${{ env.API_IMAGE }}:staging
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push :latest
+      - name: Build and push API :latest
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ env.IMAGE_NAME }}:latest
+          tags: ${{ env.API_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ── MCP image ──────────────────────────────────────────────────────
+
+      - name: Build and push MCP :staging
+        if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.mcp
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.MCP_IMAGE }}:staging
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push MCP :latest
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.mcp
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.MCP_IMAGE }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -2,10 +2,12 @@ package io.darqlab.papyrus.api.service;
 
 import io.darqlab.papyrus.core.domain.ExtractedText;
 import io.darqlab.papyrus.core.domain.IngestionStatus;
+import io.darqlab.papyrus.core.domain.Source;
 import io.darqlab.papyrus.core.service.EmbeddingService;
 import io.darqlab.papyrus.core.util.MimeTypeDetector;
 import io.darqlab.papyrus.core.util.TokenEstimator;
 import io.darqlab.papyrus.extractor.FormatRouter;
+import io.darqlab.papyrus.pipeline.archive.ArchiveService;
 import io.darqlab.papyrus.pipeline.chunking.ChunkingService;
 import io.darqlab.papyrus.pipeline.ocr.OcrCorrectionService;
 import io.darqlab.papyrus.pipeline.store.VectorStoreService;
@@ -33,23 +35,36 @@ public class DocumentService {
     private final VectorStoreService vectorStoreService;
     private final DocumentSourceRepository sourceRepository;
     private final OcrCorrectionService ocrCorrectionService;
+    private final ArchiveService archiveService;
 
     public DocumentService(FormatRouter formatRouter,
                            ChunkingService chunkingService,
                            EmbeddingService embeddingService,
                            VectorStoreService vectorStoreService,
                            DocumentSourceRepository sourceRepository,
-                           OcrCorrectionService ocrCorrectionService) {
+                           OcrCorrectionService ocrCorrectionService,
+                           ArchiveService archiveService) {
         this.formatRouter          = formatRouter;
         this.chunkingService       = chunkingService;
         this.embeddingService      = embeddingService;
         this.vectorStoreService    = vectorStoreService;
         this.sourceRepository      = sourceRepository;
         this.ocrCorrectionService  = ocrCorrectionService;
+        this.archiveService        = archiveService;
     }
 
     @Transactional
     public IngestionResult ingest(byte[] content, String filename, String language) {
+        return ingest(content, filename, language, null, null);
+    }
+
+    @Transactional
+    public IngestionResult ingest(byte[] content, String filename, String language, String preExtractedText) {
+        return ingest(content, filename, language, preExtractedText, null);
+    }
+
+    @Transactional
+    public IngestionResult ingest(byte[] content, String filename, String language, String preExtractedText, String archiveFilename) {
         String mimeType = MimeTypeDetector.detect(filename);
         UUID sourceId   = UUID.randomUUID();
 
@@ -58,13 +73,30 @@ public class DocumentService {
                 language, IngestionStatus.PROCESSING);
         sourceRepository.saveAndFlush(source);
         try {
-            ExtractedText extracted = formatRouter.route(
-                    new ByteArrayInputStream(content), filename);
+            ExtractedText extracted;
+            if (preExtractedText != null && !preExtractedText.isBlank()) {
+                // User-edited OCR output — still counts as OCR for archiving
+                boolean isOcrSource = IMAGE_MIME_TYPES.contains(mimeType);
+                extracted = isOcrSource ? ExtractedText.ofOcr(preExtractedText) : ExtractedText.of(preExtractedText);
+            } else {
+                extracted = formatRouter.route(new ByteArrayInputStream(content), filename);
+                // For image files: apply LLM correction on top of raw Tesseract output
+                if (IMAGE_MIME_TYPES.contains(mimeType) && ocrCorrectionService.isEnabled()) {
+                    String corrected = ocrCorrectionService.correct(content, mimeType, extracted.content());
+                    extracted = ExtractedText.of(corrected);
+                }
+            }
 
-            // For image files: apply LLM correction on top of raw Tesseract output
-            if (IMAGE_MIME_TYPES.contains(mimeType) && ocrCorrectionService.isEnabled()) {
-                String corrected = ocrCorrectionService.correct(content, mimeType, extracted.content());
-                extracted = ExtractedText.of(corrected);
+            // Archive all file types — original + extracted text are the source of truth.
+            // OCR files use content-derived naming; non-OCR files retain their original filename stem.
+            boolean isOcr = IMAGE_MIME_TYPES.contains(mimeType);
+            String effectiveArchiveName = archiveFilename; // user-supplied (OCR preview flow)
+            if (!isOcr && (effectiveArchiveName == null || effectiveArchiveName.isBlank())) {
+                effectiveArchiveName = stripExtension(filename);
+            }
+            String archivedAs = archiveService.archive(sourceId, filename, content, extracted.content(), effectiveArchiveName);
+            if (archivedAs != null) {
+                source.setArchiveFilename(archivedAs);
             }
 
             List<String> chunks = chunkingService.chunk(extracted);
@@ -133,7 +165,67 @@ public class DocumentService {
         return true;
     }
 
+    /**
+     * Re-ingest an archived source using its stored extracted text.
+     * Creates a new source record (new UUID) pointing back to the original archive directory.
+     * The original source record is left untouched.
+     */
+    @Transactional
+    public IngestionResult reingest(UUID originalSourceId) {
+        Source original = vectorStoreService.findById(originalSourceId);
+        if (original == null) throw new IllegalArgumentException("Source not found: " + originalSourceId);
+        if (original.archiveFilename() == null) throw new IllegalStateException("Source has no archived file: " + originalSourceId);
+
+        // Resolve the actual archive directory — may be the original or a prior re-ingest's source
+        UUID archiveDirId = original.archiveSourceId() != null ? original.archiveSourceId() : originalSourceId;
+
+        String extractedText = archiveService.readExtractedText(archiveDirId, original.archiveFilename());
+        if (extractedText == null || extractedText.isBlank()) {
+            throw new IllegalStateException("Archived extracted text not found for: " + archiveDirId + "/" + original.archiveFilename());
+        }
+
+        UUID newSourceId = UUID.randomUUID();
+        DocumentSourceEntity source = new DocumentSourceEntity(
+                newSourceId, original.filename(), original.contentType(), null,
+                "eng", IngestionStatus.PROCESSING);
+        source.setArchiveFilename(original.archiveFilename());
+        source.setArchiveSourceId(archiveDirId);
+        sourceRepository.saveAndFlush(source);
+
+        try {
+            ExtractedText extracted = ExtractedText.of(extractedText);
+            List<String> chunks = chunkingService.chunk(extracted);
+
+            source.setPageCount(extracted.pageCount());
+
+            if (!chunks.isEmpty()) {
+                List<List<Float>> embeddings = chunks.stream()
+                        .map(embeddingService::embed)
+                        .toList();
+                List<Integer> tokenCounts = chunks.stream()
+                        .map(TokenEstimator::estimate)
+                        .toList();
+                vectorStoreService.storeChunks(newSourceId, chunks, embeddings, tokenCounts, null);
+            }
+
+            source.setStatus(IngestionStatus.DONE);
+            sourceRepository.save(source);
+            return new IngestionResult(newSourceId, original.filename(), chunks.size());
+
+        } catch (Exception e) {
+            source.setStatus(IngestionStatus.FAILED);
+            source.setError(e.getMessage());
+            sourceRepository.save(source);
+            throw new RuntimeException("Re-ingestion failed for source " + originalSourceId, e);
+        }
+    }
+
     public record IngestionResult(UUID sourceId, String filename, int chunkCount) {}
+
+    private static String stripExtension(String filename) {
+        int dot = filename.lastIndexOf('.');
+        return dot > 0 ? filename.substring(0, dot) : filename;
+    }
 
     /**
      * Extract text from a file without storing anything — used for OCR preview/verification.

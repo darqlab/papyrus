@@ -61,7 +61,7 @@ public class ImageOcrExtractor implements DocumentExtractor {
                 throw new ExtractionException("Could not decode image: " + filename, null);
             }
             String text = tesseract().doOCR(image);
-            return ExtractedText.of(text != null ? text.strip() : "");
+            return ExtractedText.ofOcr(text != null ? text.strip() : "");
         } catch (IOException e) {
             throw new ExtractionException("Failed to read image: " + filename, e);
         } catch (TesseractException e) {

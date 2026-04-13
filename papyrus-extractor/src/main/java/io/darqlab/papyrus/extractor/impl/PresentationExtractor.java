@@ -47,7 +47,7 @@ public class PresentationExtractor implements DocumentExtractor {
 
             String content = String.join("\n\n", slideTexts);
             List<String> pages = slideTexts.isEmpty() ? List.of() : slideTexts;
-            return new ExtractedText(content, pages, slides.size());
+            return new ExtractedText(content, pages, slides.size(), false);
 
         } catch (IOException e) {
             throw new ExtractionException("Failed to extract text from presentation: " + filename, e);

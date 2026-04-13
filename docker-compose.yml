@@ -1,0 +1,70 @@
+# Local development compose — builds images from source, no registry push needed.
+# Requires the standalone DB to be running first:
+#   docker compose -f docker-compose.db.yml up -d
+#
+# Usage:
+#   docker compose -f docker-compose.local.yml up -d --build
+#   docker compose -f docker-compose.local.yml up -d --build papyrus-api   # rebuild one service
+#   docker compose -f docker-compose.local.yml down
+
+services:
+
+  papyrus-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: papyrus-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8081}:8080"
+    environment:
+      DATABASE_URL:           jdbc:postgresql://papyrus-pgvector:5432/${POSTGRES_DB:-papyrus}
+      DATABASE_USER:          ${POSTGRES_USER:-papyrus}
+      DATABASE_PASSWORD:      ${POSTGRES_PASSWORD:-papyrus}
+      VOYAGE_API_KEY:         ${VOYAGE_API_KEY}
+      ANTHROPIC_API_KEY:      ${ANTHROPIC_API_KEY:-}
+      OCR_CORRECTION_ENABLED: ${OCR_CORRECTION_ENABLED:-false}
+      ARCHIVE_ENABLED:        ${ARCHIVE_ENABLED:-false}
+      ARCHIVE_PATH:           /data/papyrus/archive
+      TZ: Asia/Manila
+    volumes:
+      - ./volumes/archive:/data/papyrus/archive
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - papyrus-db
+
+  papyrus-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    container_name: papyrus-mcp
+    restart: unless-stopped
+    ports:
+      - "${MCP_PORT:-8082}:8080"
+    environment:
+      DATABASE_URL:    jdbc:postgresql://papyrus-pgvector:5432/${POSTGRES_DB:-papyrus}
+      DB_USER:         ${POSTGRES_USER:-papyrus}
+      DB_PASSWORD:     ${POSTGRES_PASSWORD:-papyrus}
+      VOYAGE_API_KEY:  ${VOYAGE_API_KEY}
+      ARCHIVE_ENABLED: ${ARCHIVE_ENABLED:-false}
+      ARCHIVE_PATH:    /data/papyrus/archive
+      TZ: Asia/Manila
+    volumes:
+      - ./volumes/archive:/data/papyrus/archive
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - papyrus-db
+
+networks:
+  papyrus-db:
+    external: true

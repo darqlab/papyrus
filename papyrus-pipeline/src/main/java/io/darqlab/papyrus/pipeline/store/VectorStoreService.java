@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -72,7 +73,7 @@ public class VectorStoreService {
             return jdbc.query("""
                     SELECT dc.id, dc.source_id, dc.chunk_index, dc.page_number,
                            dc.content, dc.token_count, dc.created_at,
-                           ds.filename,
+                           ds.filename, ds.archive_filename,
                            1 - (dc.embedding <=> ?::vector) AS score
                     FROM document_chunks dc
                     JOIN document_sources ds ON dc.source_id = ds.id
@@ -88,7 +89,7 @@ public class VectorStoreService {
         return jdbc.query("""
                 SELECT dc.id, dc.source_id, dc.chunk_index, dc.page_number,
                        dc.content, dc.token_count, dc.created_at,
-                       ds.filename,
+                       ds.filename, ds.archive_filename,
                        1 - (dc.embedding <=> ?::vector) AS score
                 FROM document_chunks dc
                 JOIN document_sources ds ON dc.source_id = ds.id
@@ -114,11 +115,24 @@ public class VectorStoreService {
      */
     public List<Source> listSources(int limit, int offset) {
         return sourceRepository.findAll().stream()
+                .sorted(Comparator.comparing(DocumentSourceEntity::getCreatedAt,
+                        Comparator.reverseOrder()))
                 .skip(offset)
                 .limit(limit)
-                .map(e -> new Source(e.getId(), e.getFilename(),
-                        e.getContentType(), e.getStatus(), e.getCreatedAt()))
+                .map(this::toSource)
                 .toList();
+    }
+
+    /**
+     * Find a single source by ID, or null if not found.
+     */
+    public Source findById(UUID id) {
+        return sourceRepository.findById(id).map(this::toSource).orElse(null);
+    }
+
+    private Source toSource(DocumentSourceEntity e) {
+        return new Source(e.getId(), e.getFilename(), e.getArchiveFilename(),
+                e.getArchiveSourceId(), e.getContentType(), e.getStatus(), e.getCreatedAt());
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -140,6 +154,6 @@ public class VectorStoreService {
                 null,
                 rs.getTimestamp("created_at").toInstant()
         );
-        return new SearchResult(chunk, rs.getDouble("score"), rs.getString("filename"));
+        return new SearchResult(chunk, rs.getDouble("score"), rs.getString("filename"), rs.getString("archive_filename"));
     }
 }

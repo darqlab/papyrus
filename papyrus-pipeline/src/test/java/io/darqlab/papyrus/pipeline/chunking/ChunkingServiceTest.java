@@ -19,7 +19,8 @@ class ChunkingServiceTest {
                 new PapyrusProperties.ChunkingProperties(strategy, maxTokens, overlapTokens),
                 new PapyrusProperties.SearchProperties(5),
                 new PapyrusProperties.OcrProperties(
-                        new PapyrusProperties.CorrectionProperties(false, null, null))
+                        new PapyrusProperties.CorrectionProperties(false, null, null)),
+                new PapyrusProperties.ArchiveProperties(false, null, null)
         );
         return new ChunkingService(props);
     }
@@ -81,7 +82,8 @@ class ChunkingServiceTest {
         ExtractedText text = new ExtractedText(
                 "Page one\nPage two",
                 List.of("Page one", "Page two"),
-                2
+                2,
+                false
         );
 
         List<String> chunks = service.chunk(text);
@@ -97,7 +99,8 @@ class ChunkingServiceTest {
         ExtractedText text = new ExtractedText(
                 "Content",
                 List.of("Content", "   ", "More content"),
-                3
+                3,
+                false
         );
 
         List<String> chunks = service.chunk(text);

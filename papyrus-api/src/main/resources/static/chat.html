@@ -113,7 +113,7 @@
     }
 
     #messages {
-      max-width: 760px;
+      max-width: 1100px;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
@@ -122,14 +122,14 @@
     }
 
     /* ── Message bubbles ─────────────────────────────────────────── */
-    .msg { display: flex; flex-direction: column; gap: .25rem; }
-    .msg.user { align-items: flex-end; }
-    .msg.assistant { align-items: flex-start; }
+    .msg { display: flex; flex-direction: column; gap: .25rem; width: 100%; }
+    .msg.user { align-items: flex-end; padding-right: 12%; }
+    .msg.assistant { align-items: flex-start; padding-left: 0; }
 
     .bubble {
       position: relative;
       padding: .75rem 1.1rem;
-      max-width: 82%;
+      max-width: 88%;
       line-height: 1.65;
       font-size: .95rem;
       word-break: break-word;
@@ -170,7 +170,7 @@
     .msg-time {
       font-size: .72rem;
       color: #9ca3af;
-      padding: 0 .4rem;
+      padding: 0 .4rem .2rem;
     }
 
     /* Markdown styles inside assistant bubble */
@@ -216,7 +216,7 @@
       flex-shrink: 0;
     }
     #input-inner {
-      max-width: 760px;
+      max-width: 1100px;
       margin: 0 auto;
       display: flex;
       gap: .5rem;
@@ -257,7 +257,7 @@
     #send-btn svg { width: 18px; height: 18px; }
 
     #input-meta {
-      max-width: 760px;
+      max-width: 1100px;
       margin: .35rem auto 0;
       display: flex;
       justify-content: space-between;
@@ -266,25 +266,6 @@
     .hint { font-size: .78rem; color: #9ca3af; }
     #char-count { font-size: .75rem; color: #9ca3af; transition: color .15s; }
     #char-count.warn { color: #f59e0b; }
-
-    /* ── Document scope selector ─────────────────────────────────── */
-    #scope-row {
-      max-width: 760px;
-      margin: 0 auto .5rem;
-    }
-    #source-select {
-      width: 100%;
-      padding: .45rem .75rem;
-      border: 1.5px solid #d1d5db;
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: .85rem;
-      color: #374151;
-      background: #f9fafb;
-      outline: none;
-      transition: border-color .15s;
-    }
-    #source-select:focus { border-color: #7c3aed; }
 
     /* ── Sources citations panel ─────────────────────────────────── */
     .sources-panel {
@@ -321,6 +302,8 @@
     }
     .source-item { line-height: 1.5; }
     .source-item strong { color: #374151; }
+    .source-link { color: #374151; font-weight: 600; text-decoration: none; border-bottom: 1px solid #d1d5db; transition: color .15s, border-color .15s; }
+    .source-link:hover { color: #4361ee; border-bottom-color: #4361ee; }
     .source-excerpt { color: #9ca3af; display: block; }
 
     /* ── Inline PDF button inside bubble ────────────────────────── */
@@ -365,6 +348,10 @@
       <svg viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
       <span>Ingest</span>
     </a>
+    <a href="/manage">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      <span>Manage</span>
+    </a>
   </nav>
 
   <button id="new-conv-btn" onclick="newConversation()" title="New conversation">
@@ -393,11 +380,6 @@
   </div>
 
   <div id="input-wrap">
-    <div id="scope-row">
-      <select id="source-select" title="Limit chat to one document">
-        <option value="">All documents</option>
-      </select>
-    </div>
     <div id="input-inner">
       <textarea id="msg-input" rows="1" placeholder="Message Papyrus…"></textarea>
       <button id="send-btn" onclick="sendMessage()" title="Send">
@@ -419,7 +401,6 @@
   const sendBtn       = document.getElementById('send-btn');
   const chatWrap      = document.getElementById('chat-wrap');
   const charCount     = document.getElementById('char-count');
-  const sourceSelect  = document.getElementById('source-select');
 
   const GREETING = messagesEl.innerHTML; // save initial greeting HTML
   const history = [];
@@ -492,8 +473,8 @@
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
     bubble.textContent = text;
-    div.appendChild(bubble);
     div.appendChild(makeTimestamp());
+    div.appendChild(bubble);
     messagesEl.appendChild(div);
     scrollBottom();
   }
@@ -576,7 +557,6 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
     charCount.classList.remove('warn');
 
     const needsPdf = wantsPdf(text);
-    const sourceId = sourceSelect.value || null;
 
     appendUser(text);
     history.push({ role: 'user', content: text });
@@ -589,7 +569,7 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history, sourceId })
+        body: JSON.stringify({ messages: history })
       });
 
       if (!res.ok) {
@@ -637,14 +617,16 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
       }
 
       bubble.innerHTML = marked.parse(accumulated);
+      // Linkify any inline source citations in the rendered text
+      if (sourcesData.length > 0) linkifySourceCitations(bubble, sourcesData);
       // Add copy button and optional PDF button after streaming
       const copyBtn = makeCopyBtn(() => accumulated);
       bubble.appendChild(copyBtn);
       if (needsPdf) addPdfButton(bubble);
       // Inject sources citations if present
       if (sourcesData.length > 0) injectSources(bubble, sourcesData);
-      // Add timestamp
-      msgEl.appendChild(makeTimestamp());
+      // Add timestamp above the bubble
+      msgEl.insertBefore(makeTimestamp(), bubble);
       scrollBottom();
       history.push({ role: 'assistant', content: accumulated });
 
@@ -658,19 +640,55 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
     }
   }
 
-  // ── Document selector ────────────────────────────────────────────
-  async function loadDocuments() {
-    try {
-      const res  = await fetch('/api/documents?limit=200');
-      const docs = await res.json();
-      sourceSelect.innerHTML = '<option value="">All documents</option>';
-      docs.forEach(d => {
-        const opt = document.createElement('option');
-        opt.value = d.id;
-        opt.textContent = d.filename;
-        sourceSelect.appendChild(opt);
-      });
-    } catch (_) {}
+  // ── Linkify inline source citations in rendered markdown ─────────
+  // Finds text nodes containing archive filenames (e.g. "Source: 1958-03-16-wmm-execomm")
+  // and wraps the filename portion in a clickable <a> link to the archived image.
+  function linkifySourceCitations(bubble, sources) {
+    const fileMap = new Map(); // archiveFilename → imageUrl
+    sources.forEach(s => {
+      if (s.sourceId && s.archiveFilename) {
+        const url = `/api/documents/${s.sourceId}/file`;
+        fileMap.set(s.archiveFilename, url);
+      }
+    });
+    if (fileMap.size === 0) return;
+
+    // Build a single regex that matches any of the archive filenames
+    const escaped = [...fileMap.keys()].map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const pattern = new RegExp('(' + escaped.join('|') + ')', 'g');
+
+    // Walk all text nodes inside the bubble
+    const walker = document.createTreeWalker(bubble, NodeFilter.SHOW_TEXT);
+    const textNodes = [];
+    let node;
+    while ((node = walker.nextNode())) textNodes.push(node);
+
+    textNodes.forEach(textNode => {
+      if (!pattern.test(textNode.nodeValue)) return;
+      pattern.lastIndex = 0; // reset after test()
+
+      const parent = textNode.parentNode;
+      const frag = document.createDocumentFragment();
+      let last = 0;
+      let m;
+      while ((m = pattern.exec(textNode.nodeValue)) !== null) {
+        if (m.index > last) {
+          frag.appendChild(document.createTextNode(textNode.nodeValue.slice(last, m.index)));
+        }
+        const a = document.createElement('a');
+        a.href = fileMap.get(m[1]);
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.className = 'source-link';
+        a.textContent = m[1];
+        frag.appendChild(a);
+        last = m.index + m[1].length;
+      }
+      if (last < textNode.nodeValue.length) {
+        frag.appendChild(document.createTextNode(textNode.nodeValue.slice(last)));
+      }
+      parent.replaceChild(frag, textNode);
+    });
   }
 
   // ── Sources citations panel ──────────────────────────────────────
@@ -684,12 +702,33 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
     sources.forEach(s => {
       const item = document.createElement('div');
       item.className = 'source-item';
-      item.innerHTML = `<strong>${esc(s.filename)}</strong><span class="source-excerpt">${esc(s.excerpt)}</span>`;
+      const label = formatSourceLabel(s.filename);
+      const hasImage = s.sourceId && s.archiveFilename;
+      const imageUrl = hasImage
+        ? `/api/documents/${s.sourceId}/file`
+        : null;
+      const titleEl = hasImage
+        ? `<a href="${imageUrl}" target="_blank" rel="noopener" class="source-link">${esc(label)}</a>`
+        : `<strong>${esc(label)}</strong>`;
+      item.innerHTML = `${titleEl}<span class="source-excerpt">${esc(s.excerpt)}</span>`;
       list.appendChild(item);
     });
     details.appendChild(summary);
     details.appendChild(list);
     bubble.appendChild(details);
+  }
+
+  // ── Source label formatter ───────────────────────────────────────
+  function formatSourceLabel(filename) {
+    if (!filename) return filename;
+    // Match date prefix: YYYY-MM-DD
+    const dateMatch = filename.match(/^(\d{4}-\d{2}-\d{2})-(.+?)(-p\d+)?$/);
+    if (!dateMatch) return filename;
+    const date = dateMatch[1];
+    const slug = dateMatch[2].replace(/-/g, ' ');
+    const page = dateMatch[3] ? dateMatch[3].replace('-p', 'p.') : null;
+    const formatted = new Date(date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    return page ? `${slug} — ${formatted}, ${page}` : `${slug} — ${formatted}`;
   }
 
   // ── Health indicator ─────────────────────────────────────────────
@@ -718,7 +757,6 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
 
   window.addEventListener('DOMContentLoaded', () => {
     inputEl.focus();
-    loadDocuments();
     checkHealth();
     setInterval(checkHealth, 60_000);
   });

@@ -1,0 +1,37 @@
+# Standalone pgvector instance — run this once, leave it running.
+# The app (docker-compose.local.yml) connects to it via the papyrus-db network.
+#
+# Usage:
+#   docker compose -f docker-compose.db.yml up -d
+#   docker compose -f docker-compose.db.yml down     # stop (keeps data)
+#   docker compose -f docker-compose.db.yml down -v  # stop + delete data ⚠️
+
+services:
+
+  pgvector:
+    image: pgvector/pgvector:pg16
+    container_name: papyrus-pgvector
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:-papyrus}
+      POSTGRES_USER:     ${POSTGRES_USER:-papyrus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-papyrus}
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-papyrus} -d ${POSTGRES_DB:-papyrus}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - papyrus-db
+
+volumes:
+  pgvector_data:
+
+networks:
+  papyrus-db:
+    name: papyrus-db

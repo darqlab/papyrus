@@ -40,6 +40,13 @@ papyrus:
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
       model: ${OLLAMA_MODEL:nomic-embed-text}
+  archive:
+    enabled: ${ARCHIVE_ENABLED:false}
+    path: ${ARCHIVE_PATH:/data/papyrus/archive}
+    abbreviations:
+      "[minutes of the meeting of]": ""
+      "[executive committee]": execomm
+      "[western mindanao mission]": wmm
   chunking:
     strategy: ${CHUNKING_STRATEGY:PARAGRAPH}
     max-tokens: ${CHUNKING_MAX_TOKENS:512}

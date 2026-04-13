@@ -10,6 +10,8 @@ import java.util.UUID;
 public record Source(
         UUID id,
         String filename,
+        String archiveFilename,
+        UUID archiveSourceId,
         String contentType,
         IngestionStatus status,
         Instant createdAt
