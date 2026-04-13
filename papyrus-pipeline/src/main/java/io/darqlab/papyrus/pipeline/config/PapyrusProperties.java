@@ -2,6 +2,8 @@ package io.darqlab.papyrus.pipeline.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.Map;
+
 @ConfigurationProperties(prefix = "papyrus")
 public record PapyrusProperties(
         EmbeddingProperties embedding,
@@ -32,5 +34,5 @@ public record PapyrusProperties(
 
     public record CorrectionProperties(boolean enabled, String apiKey, String model) {}
 
-    public record ArchiveProperties(boolean enabled, String path) {}
+    public record ArchiveProperties(boolean enabled, String path, Map<String, String> abbreviations) {}
 }

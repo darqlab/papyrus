@@ -20,7 +20,7 @@ class ChunkingServiceTest {
                 new PapyrusProperties.SearchProperties(5),
                 new PapyrusProperties.OcrProperties(
                         new PapyrusProperties.CorrectionProperties(false, null, null)),
-                new PapyrusProperties.ArchiveProperties(false, null)
+                new PapyrusProperties.ArchiveProperties(false, null, null)
         );
         return new ChunkingService(props);
     }
