@@ -5,6 +5,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import org.springframework.beans.factory.annotation.Autowired;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -66,6 +68,7 @@ public class ArchiveService {
     private final Path basePath;
     private final Map<String, String> abbreviations;
 
+    @Autowired
     public ArchiveService(PapyrusProperties properties) {
         PapyrusProperties.ArchiveProperties cfg =
                 properties.archive() != null
@@ -95,6 +98,44 @@ public class ArchiveService {
     }
 
     /**
+     * Find the original archived file (any type) for a given source and archive filename.
+     * Returns the Path if it exists, or null if not found.
+     */
+    public Path findOriginalFile(UUID sourceId, String archiveFilename) {
+        if (archiveFilename == null || archiveFilename.isBlank()) return null;
+        Path dir = basePath.resolve(sourceId.toString());
+        if (!Files.exists(dir)) return null;
+        try {
+            return Files.list(dir)
+                    .filter(p -> {
+                        String name = p.getFileName().toString();
+                        return name.startsWith(archiveFilename + ".") && !name.endsWith(".txt");
+                    })
+                    .findFirst()
+                    .orElse(null);
+        } catch (IOException e) {
+            log.warn("Failed to list archive dir for {}: {}", sourceId, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Read the extracted text (.txt) for an archived source.
+     * Returns null if the file does not exist or cannot be read.
+     */
+    public String readExtractedText(UUID sourceId, String archiveFilename) {
+        if (archiveFilename == null || archiveFilename.isBlank()) return null;
+        Path file = basePath.resolve(sourceId.toString()).resolve(archiveFilename + ".txt");
+        if (!Files.exists(file)) return null;
+        try {
+            return Files.readString(file, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            log.warn("Failed to read extracted text for {}/{}: {}", sourceId, archiveFilename, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Archive the original file and its extracted text.
      *
      * <p>Creates a directory {@code {basePath}/{sourceId}/} and writes the original
@@ -106,15 +147,21 @@ public class ArchiveService {
      * @param content       the raw file bytes
      * @param extractedText the text produced by OCR / extraction
      */
-    public void archive(UUID sourceId, String filename, byte[] content, String extractedText) {
-        if (!enabled) return;
+    public String archive(UUID sourceId, String filename, byte[] content, String extractedText) {
+        return archive(sourceId, filename, content, extractedText, null);
+    }
+
+    public String archive(UUID sourceId, String filename, byte[] content, String extractedText, String customFilename) {
+        if (!enabled) return null;
 
         try {
             Path dir = basePath.resolve(sourceId.toString());
             Files.createDirectories(dir);
 
             String extension = getExtension(filename);
-            String baseName = buildArchiveFilename(extractedText, filename);
+            String baseName = (customFilename != null && !customFilename.isBlank())
+                    ? customFilename.strip()
+                    : buildArchiveFilename(extractedText, filename);
 
             // Write original file with content-derived name
             Files.write(dir.resolve(baseName + extension), content);
@@ -123,9 +170,11 @@ public class ArchiveService {
             Files.write(dir.resolve(baseName + ".txt"), extractedText.getBytes(StandardCharsets.UTF_8));
 
             log.debug("Archived source {} as '{}' to {}", sourceId, baseName, dir);
+            return baseName;
 
         } catch (IOException e) {
             log.warn("Failed to archive source {} ({}): {}", sourceId, filename, e.getMessage());
+            return null;
         }
     }
 
@@ -139,7 +188,7 @@ public class ArchiveService {
      *   <li>Slug: first line slugified with abbreviations, or original filename stem</li>
      * </ul>
      */
-    String buildArchiveFilename(String extractedText, String fallbackFilename) {
+    public String buildArchiveFilename(String extractedText, String fallbackFilename) {
         String date = extractDate(extractedText);
         if (date == null) {
             date = LocalDate.now().toString();
@@ -149,11 +198,10 @@ public class ArchiveService {
         String slug = slugify(extractedText, fallbackFilename);
 
         StringBuilder sb = new StringBuilder();
-        sb.append(date);
+        sb.append(date).append('-').append(slug);
         if (page != null) {
-            sb.append('_').append(page);
+            sb.append('-').append(page);
         }
-        sb.append('_').append(slug);
         return sb.toString();
     }
 

@@ -302,6 +302,8 @@
     }
     .source-item { line-height: 1.5; }
     .source-item strong { color: #374151; }
+    .source-link { color: #374151; font-weight: 600; text-decoration: none; border-bottom: 1px solid #d1d5db; transition: color .15s, border-color .15s; }
+    .source-link:hover { color: #4361ee; border-bottom-color: #4361ee; }
     .source-excerpt { color: #9ca3af; display: block; }
 
     /* ── Inline PDF button inside bubble ────────────────────────── */
@@ -345,6 +347,10 @@
     <a href="/ingest">
       <svg viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
       <span>Ingest</span>
+    </a>
+    <a href="/manage">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      <span>Manage</span>
     </a>
   </nav>
 
@@ -611,6 +617,8 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
       }
 
       bubble.innerHTML = marked.parse(accumulated);
+      // Linkify any inline source citations in the rendered text
+      if (sourcesData.length > 0) linkifySourceCitations(bubble, sourcesData);
       // Add copy button and optional PDF button after streaming
       const copyBtn = makeCopyBtn(() => accumulated);
       bubble.appendChild(copyBtn);
@@ -632,6 +640,57 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
     }
   }
 
+  // ── Linkify inline source citations in rendered markdown ─────────
+  // Finds text nodes containing archive filenames (e.g. "Source: 1958-03-16-wmm-execomm")
+  // and wraps the filename portion in a clickable <a> link to the archived image.
+  function linkifySourceCitations(bubble, sources) {
+    const fileMap = new Map(); // archiveFilename → imageUrl
+    sources.forEach(s => {
+      if (s.sourceId && s.archiveFilename) {
+        const url = `/api/documents/${s.sourceId}/file`;
+        fileMap.set(s.archiveFilename, url);
+      }
+    });
+    if (fileMap.size === 0) return;
+
+    // Build a single regex that matches any of the archive filenames
+    const escaped = [...fileMap.keys()].map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const pattern = new RegExp('(' + escaped.join('|') + ')', 'g');
+
+    // Walk all text nodes inside the bubble
+    const walker = document.createTreeWalker(bubble, NodeFilter.SHOW_TEXT);
+    const textNodes = [];
+    let node;
+    while ((node = walker.nextNode())) textNodes.push(node);
+
+    textNodes.forEach(textNode => {
+      if (!pattern.test(textNode.nodeValue)) return;
+      pattern.lastIndex = 0; // reset after test()
+
+      const parent = textNode.parentNode;
+      const frag = document.createDocumentFragment();
+      let last = 0;
+      let m;
+      while ((m = pattern.exec(textNode.nodeValue)) !== null) {
+        if (m.index > last) {
+          frag.appendChild(document.createTextNode(textNode.nodeValue.slice(last, m.index)));
+        }
+        const a = document.createElement('a');
+        a.href = fileMap.get(m[1]);
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.className = 'source-link';
+        a.textContent = m[1];
+        frag.appendChild(a);
+        last = m.index + m[1].length;
+      }
+      if (last < textNode.nodeValue.length) {
+        frag.appendChild(document.createTextNode(textNode.nodeValue.slice(last)));
+      }
+      parent.replaceChild(frag, textNode);
+    });
+  }
+
   // ── Sources citations panel ──────────────────────────────────────
   function injectSources(bubble, sources) {
     const details = document.createElement('details');
@@ -643,12 +702,33 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
     sources.forEach(s => {
       const item = document.createElement('div');
       item.className = 'source-item';
-      item.innerHTML = `<strong>${esc(s.filename)}</strong><span class="source-excerpt">${esc(s.excerpt)}</span>`;
+      const label = formatSourceLabel(s.filename);
+      const hasImage = s.sourceId && s.archiveFilename;
+      const imageUrl = hasImage
+        ? `/api/documents/${s.sourceId}/file`
+        : null;
+      const titleEl = hasImage
+        ? `<a href="${imageUrl}" target="_blank" rel="noopener" class="source-link">${esc(label)}</a>`
+        : `<strong>${esc(label)}</strong>`;
+      item.innerHTML = `${titleEl}<span class="source-excerpt">${esc(s.excerpt)}</span>`;
       list.appendChild(item);
     });
     details.appendChild(summary);
     details.appendChild(list);
     bubble.appendChild(details);
+  }
+
+  // ── Source label formatter ───────────────────────────────────────
+  function formatSourceLabel(filename) {
+    if (!filename) return filename;
+    // Match date prefix: YYYY-MM-DD
+    const dateMatch = filename.match(/^(\d{4}-\d{2}-\d{2})-(.+?)(-p\d+)?$/);
+    if (!dateMatch) return filename;
+    const date = dateMatch[1];
+    const slug = dateMatch[2].replace(/-/g, ' ');
+    const page = dateMatch[3] ? dateMatch[3].replace('-p', 'p.') : null;
+    const formatted = new Date(date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    return page ? `${slug} — ${formatted}, ${page}` : `${slug} — ${formatted}`;
   }
 
   // ── Health indicator ─────────────────────────────────────────────

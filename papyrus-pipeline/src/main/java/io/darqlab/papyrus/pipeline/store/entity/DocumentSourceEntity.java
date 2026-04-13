@@ -26,6 +26,12 @@ public class DocumentSourceEntity {
     @Column(name = "content_type", nullable = false)
     private String contentType;
 
+    @Column(name = "archive_filename")
+    private String archiveFilename;
+
+    @Column(name = "archive_source_id")
+    private UUID archiveSourceId;
+
     @Column(name = "file_size")
     private Long fileSize;
 
@@ -76,6 +82,10 @@ public class DocumentSourceEntity {
     public UUID getId() { return id; }
     public String getFilename() { return filename; }
     public String getContentType() { return contentType; }
+    public String getArchiveFilename() { return archiveFilename; }
+    public void setArchiveFilename(String archiveFilename) { this.archiveFilename = archiveFilename; }
+    public UUID getArchiveSourceId() { return archiveSourceId; }
+    public void setArchiveSourceId(UUID archiveSourceId) { this.archiveSourceId = archiveSourceId; }
     public IngestionStatus getStatus() { return status; }
     public void setStatus(IngestionStatus status) { this.status = status; }
     public void setError(String error) { this.error = error; }
