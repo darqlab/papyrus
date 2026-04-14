@@ -116,21 +116,33 @@ public class ChatController {
                 }
 
                 // ── Stream response ───────────────────────────────────────
+                long[] inputTokens  = {0};
+                long[] outputTokens = {0};
+
                 try (StreamResponse<RawMessageStreamEvent> stream =
                              anthropic.messages().createStreaming(builder.build())) {
 
-                    stream.stream()
-                            .flatMap(e -> e.contentBlockDelta().stream())
-                            .flatMap(e -> e.delta().text().stream())
-                            .forEach(delta -> {
-                                try {
-                                    emitter.send(SseEmitter.event().data(
-                                            mapper.writeValueAsString(delta.text())));
-                                } catch (IOException ex) {
-                                    throw new RuntimeException(ex);
-                                }
-                            });
+                    stream.stream().forEach(event -> {
+                        event.messageStart().ifPresent(e ->
+                                inputTokens[0] = e.message().usage().inputTokens());
+                        event.messageDelta().ifPresent(e ->
+                                outputTokens[0] = e.usage().outputTokens());
+                        event.contentBlockDelta().ifPresent(e ->
+                                e.delta().text().ifPresent(text -> {
+                                    try {
+                                        emitter.send(SseEmitter.event().data(
+                                                mapper.writeValueAsString(text.text())));
+                                    } catch (IOException ex) {
+                                        throw new RuntimeException(ex);
+                                    }
+                                }));
+                    });
                 }
+
+                // Emit token usage
+                emitter.send(SseEmitter.event().name("usage")
+                        .data(mapper.writeValueAsString(
+                                Map.of("inputTokens", inputTokens[0], "outputTokens", outputTokens[0]))));
 
                 // Emit sources before done
                 if (!searchResults.isEmpty()) {

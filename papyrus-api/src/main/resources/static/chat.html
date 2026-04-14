@@ -267,6 +267,20 @@
     #char-count { font-size: .75rem; color: #9ca3af; transition: color .15s; }
     #char-count.warn { color: #f59e0b; }
 
+    /* ── Token usage badge ───────────────────────────────────────── */
+    .token-usage {
+      margin-top: .4rem;
+      font-size: .73rem;
+      color: #9ca3af;
+      display: flex;
+      gap: .5rem;
+    }
+    .token-usage span {
+      background: #f3f4f6;
+      border-radius: 4px;
+      padding: .15rem .45rem;
+    }
+
     /* ── Sources citations panel ─────────────────────────────────── */
     .sources-panel {
       margin-top: .75rem;
@@ -564,6 +578,7 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
     const { bubble, msgEl } = appendAssistant();
     let accumulated = '';
     let sourcesData = [];
+    let usageData   = null;
 
     try {
       const res = await fetch('/api/chat', {
@@ -602,6 +617,8 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
             done_flag = true;
           } else if (evtName === 'sources') {
             try { sourcesData = JSON.parse(rawData); } catch (_) {}
+          } else if (evtName === 'usage') {
+            try { usageData = JSON.parse(rawData); } catch (_) {}
           } else if (evtName === 'error') {
             bubble.innerHTML = `<span style="color:#dc2626">Error: ${esc(JSON.parse(rawData))}</span>`;
             history.pop(); return;
@@ -623,6 +640,8 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
       const copyBtn = makeCopyBtn(() => accumulated);
       bubble.appendChild(copyBtn);
       if (needsPdf) addPdfButton(bubble);
+      // Inject token usage badge
+      if (usageData) injectUsage(bubble, usageData);
       // Inject sources citations if present
       if (sourcesData.length > 0) injectSources(bubble, sourcesData);
       // Add timestamp above the bubble
@@ -689,6 +708,15 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
       }
       parent.replaceChild(frag, textNode);
     });
+  }
+
+  // ── Token usage badge ────────────────────────────────────────────
+  function injectUsage(bubble, usage) {
+    const div = document.createElement('div');
+    div.className = 'token-usage';
+    div.innerHTML = `<span>&#8593; ${usage.inputTokens.toLocaleString()} in</span>`
+                  + `<span>&#8595; ${usage.outputTokens.toLocaleString()} out</span>`;
+    bubble.appendChild(div);
   }
 
   // ── Sources citations panel ──────────────────────────────────────
