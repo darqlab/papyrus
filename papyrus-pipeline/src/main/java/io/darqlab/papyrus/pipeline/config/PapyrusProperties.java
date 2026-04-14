@@ -10,7 +10,8 @@ public record PapyrusProperties(
         ChunkingProperties chunking,
         SearchProperties search,
         OcrProperties ocr,
-        ArchiveProperties archive
+        ArchiveProperties archive,
+        ChatProperties chat
 ) {
     public record EmbeddingProperties(
             String provider,
@@ -35,4 +36,14 @@ public record PapyrusProperties(
     public record CorrectionProperties(boolean enabled, String apiKey, String model) {}
 
     public record ArchiveProperties(boolean enabled, String path, Map<String, String> abbreviations) {}
+
+    public record ChatProperties(
+            String provider,
+            AnthropicChatProperties anthropic,
+            OllamaChatProperties ollama
+    ) {}
+
+    public record AnthropicChatProperties(String apiKey, String model) {}
+
+    public record OllamaChatProperties(String baseUrl, String model) {}
 }
