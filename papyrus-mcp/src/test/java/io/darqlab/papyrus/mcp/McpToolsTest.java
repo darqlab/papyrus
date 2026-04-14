@@ -75,7 +75,8 @@ class McpToolsTest {
                 new PapyrusProperties.SearchProperties(5),
                 new PapyrusProperties.OcrProperties(
                         new PapyrusProperties.CorrectionProperties(false, null, null)),
-                new PapyrusProperties.ArchiveProperties(false, null, null));
+                new PapyrusProperties.ArchiveProperties(false, null, null),
+                null);
 
         ChunkingService chunkingService = new ChunkingService(props);
         FormatRouter formatRouter = FormatRouter.withDefaultExtractors();
@@ -116,7 +117,8 @@ class McpToolsTest {
                 new PapyrusProperties.SearchProperties(5),
                 new PapyrusProperties.OcrProperties(
                         new PapyrusProperties.CorrectionProperties(false, null, null)),
-                new PapyrusProperties.ArchiveProperties(false, null, null));
+                new PapyrusProperties.ArchiveProperties(false, null, null),
+                null);
 
         ChunkingService chunkingService = new ChunkingService(props);
         FormatRouter formatRouter = FormatRouter.withDefaultExtractors();

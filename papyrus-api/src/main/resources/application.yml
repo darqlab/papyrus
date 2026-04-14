@@ -13,6 +13,15 @@ papyrus:
       api-key: ${ANTHROPIC_API_KEY:}
       model: ${OCR_CORRECTION_MODEL:claude-sonnet-4-6}
 
+  chat:
+    provider: ${CHAT_PROVIDER:anthropic}
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+      model: ${CHAT_MODEL:claude-opus-4-6}
+    ollama:
+      base-url: ${CHAT_OLLAMA_BASE_URL:http://localhost:11434}
+      model: ${CHAT_OLLAMA_MODEL:llama3.2}
+
   archive:
     enabled: ${ARCHIVE_ENABLED:false}
     path: ${ARCHIVE_PATH:/data/papyrus/archive}
