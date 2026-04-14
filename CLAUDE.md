@@ -69,7 +69,7 @@ Papyrus is a self-hosted document intelligence MCP server used to ingest, index,
 ```
 papyrus-core        — Spring-free domain layer (records, enums, service interfaces, utilities)
 papyrus-extractor   — Spring-free format routing and text extraction (no I/O side effects)
-papyrus-pipeline    — Spring beans: chunking, Voyage AI embeddings, pgvector storage, job tracking, archive
+papyrus-pipeline    — Spring beans: chunking, embeddings, pgvector storage, job tracking, archive, chat providers
 papyrus-api         — Spring Boot REST API (port 8080/8081 in staging) — main runnable
 papyrus-mcp         — Spring Boot MCP server (SSE transport, Spring AI) — second runnable
 ```
@@ -123,6 +123,26 @@ volumes/archive/
 
 Re-ingestion reads from `.txt`, skips re-extraction, rebuilds embeddings only.
 
+### Chat flow (papyrus-api)
+
+```
+ChatController → EmbeddingService.embed(query) → VectorStoreService.searchByVector() → append excerpts to system prompt
+  → ChatService.streamChat(turns, systemPrompt) → SSE token stream
+```
+
+`ChatService` is a `papyrus-core` interface. Provider is selected at startup via `CHAT_PROVIDER`:
+
+| Bean | Provider | Condition |
+|------|----------|-----------|
+| `AnthropicChatService` | Anthropic SDK streaming | `CHAT_PROVIDER=anthropic` (default) |
+| `OllamaChatService` | Ollama `/api/chat` NDJSON stream | `CHAT_PROVIDER=ollama` |
+
+System prompt is loaded once at startup by `PromptLoader`:
+1. If `CHAT_PROMPT_FILE` is set → load from that path (fail fast if missing or blank)
+2. Otherwise → load from classpath `prompts/chat-system.md`
+
+Same pattern applies to OCR correction via `OCR_PROMPT_FILE` / `prompts/ocr-correction.md`.
+
 ### MCP server (`papyrus-mcp`)
 
 Runs separately from the REST API. Tools defined in `IngestTools` and `SearchTools` using Spring AI `@Tool` annotations. Both runnables share the same `papyrus-pipeline` and `papyrus-extractor` modules and connect to the same PostgreSQL database.
@@ -132,12 +152,18 @@ Runs separately from the REST API. Tools defined in `IngestTools` and `SearchToo
 | Env var | Purpose |
 |---------|---------|
 | `VOYAGE_API_KEY` | Required — Voyage AI embeddings |
-| `ANTHROPIC_API_KEY` | Required for OCR correction and chat |
+| `ANTHROPIC_API_KEY` | Required for Anthropic chat and OCR correction |
 | `DATABASE_URL` | PostgreSQL JDBC URL (default: `jdbc:postgresql://localhost:5432/papyrus`) |
 | `OCR_CORRECTION_ENABLED` | `true` to enable Claude LLM post-processing of Tesseract output |
 | `ARCHIVE_ENABLED` | `true` to save originals + extracted text to filesystem |
 | `ARCHIVE_PATH` | Archive root directory (default: `/data/papyrus/archive`) |
 | `TESSDATA_PREFIX` | Tesseract data path (Alpine Docker: `/usr/share/tessdata`) |
+| `CHAT_PROVIDER` | Chat LLM provider: `anthropic` (default) or `ollama` |
+| `CHAT_MODEL` | Model name for the selected provider (default: `claude-opus-4-6`) |
+| `CHAT_PROMPT_FILE` | Optional path to an external chat system prompt file (≥ 50 chars); restart required |
+| `OCR_PROMPT_FILE` | Optional path to an external OCR correction prompt file; restart required |
+| `CHAT_OLLAMA_BASE_URL` | Ollama base URL (default: `http://localhost:11434`; only used when `CHAT_PROVIDER=ollama`) |
+| `CHAT_OLLAMA_MODEL` | Ollama model name (default: `llama3.2`; only used when `CHAT_PROVIDER=ollama`) |
 
 ## Web UI Pages
 
