@@ -95,11 +95,6 @@ public class ChatController {
                     });
                 }
 
-                // Emit token usage
-                emitter.send(SseEmitter.event().name("usage")
-                        .data(mapper.writeValueAsString(
-                                Map.of("inputTokens", inputTokens[0], "outputTokens", outputTokens[0]))));
-
                 // Emit sources before done
                 if (!searchResults.isEmpty()) {
                     List<Map<String, String>> sources = new ArrayList<>();
