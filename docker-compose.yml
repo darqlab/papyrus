@@ -26,9 +26,16 @@ services:
       OCR_CORRECTION_ENABLED: ${OCR_CORRECTION_ENABLED:-false}
       ARCHIVE_ENABLED:        ${ARCHIVE_ENABLED:-false}
       ARCHIVE_PATH:           /data/papyrus/archive
+      CHAT_PROVIDER:          ${CHAT_PROVIDER:-anthropic}
+      CHAT_MODEL:             ${CHAT_MODEL:-claude-opus-4-6}
+      # Uncomment to load prompts from host files instead of classpath defaults:
+      # CHAT_PROMPT_FILE:     /etc/papyrus/prompts/chat-system.md
+      # OCR_PROMPT_FILE:      /etc/papyrus/prompts/ocr-correction.md
       TZ: Asia/Manila
     volumes:
       - ./volumes/archive:/data/papyrus/archive
+      # Uncomment to mount custom prompt files (requires CHAT_PROMPT_FILE / OCR_PROMPT_FILE above):
+      # - ./volumes/prompts:/etc/papyrus/prompts:ro
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
       interval: 30s

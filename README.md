@@ -65,9 +65,38 @@ SearchController → VoyageAiEmbeddingService.embed(query)
 |---|---|---|
 | `VOYAGE_API_KEY` | Yes | Voyage AI embeddings |
 | `DATABASE_URL` | Yes | PostgreSQL JDBC URL (default: `jdbc:postgresql://localhost:5432/papyrus`) |
-| `ANTHROPIC_API_KEY` | Only if OCR correction enabled | Claude Sonnet API key |
+| `ANTHROPIC_API_KEY` | Only if using Anthropic chat or OCR correction | Anthropic API key |
 | `OCR_CORRECTION_ENABLED` | No | Set `true` to enable LLM post-processing of Tesseract output |
 | `TESSDATA_PREFIX` | No | Tesseract data path (Alpine Docker: `/usr/share/tessdata`) |
+| `CHAT_PROVIDER` | No | Chat LLM provider: `anthropic` (default) or `ollama` |
+| `CHAT_MODEL` | No | Model for the selected provider (default: `claude-opus-4-6`) |
+| `CHAT_OLLAMA_BASE_URL` | Only if `CHAT_PROVIDER=ollama` | Ollama base URL (default: `http://localhost:11434`) |
+| `CHAT_OLLAMA_MODEL` | Only if `CHAT_PROVIDER=ollama` | Ollama model name (default: `llama3.2`) |
+| `CHAT_PROMPT_FILE` | No | Path to a custom chat system prompt file — overrides the classpath default |
+| `OCR_PROMPT_FILE` | No | Path to a custom OCR correction prompt file — overrides the classpath default |
+
+### Prompt files
+
+The chat system prompt and OCR correction prompt ship as classpath defaults inside the JAR (`prompts/chat-system.md` and `prompts/ocr-correction.md`). To customise without rebuilding:
+
+1. Place your prompt file on the host (e.g. `./volumes/prompts/chat-system.md`)
+2. Mount it into the container and set the env var:
+
+```yaml
+# docker-compose.yml
+environment:
+  CHAT_PROMPT_FILE: /etc/papyrus/prompts/chat-system.md
+volumes:
+  - ./volumes/prompts:/etc/papyrus/prompts:ro
+```
+
+3. Restart the container — prompts are loaded once at startup:
+
+```bash
+docker compose restart papyrus-api
+```
+
+Prompt files must be non-blank and at least 50 characters. The app fails fast at startup if the file is missing or too short.
 
 ## Build
 

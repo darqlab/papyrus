@@ -9,6 +9,14 @@ papyrus:
       model: nomic-embed-text
   archive:
     enabled: false
+  chat:
+    provider: anthropic
+    anthropic:
+      api-key: test-key-not-real
+      model: claude-opus-4-6
+    ollama:
+      base-url: http://localhost:11434
+      model: llama3.2
   chunking:
     strategy: paragraph
     max-tokens: 512

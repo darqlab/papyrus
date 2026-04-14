@@ -58,10 +58,16 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
-        <!-- HTTP client for Voyage AI / Ollama -->
+        <!-- HTTP client for Voyage AI / Ollama / Anthropic -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Anthropic Java SDK (AnthropicChatService) -->
+        <dependency>
+            <groupId>com.anthropic</groupId>
+            <artifactId>anthropic-java</artifactId>
         </dependency>
 
         <!-- Test -->
