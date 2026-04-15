@@ -12,7 +12,7 @@
 
     <artifactId>papyrus-mcp</artifactId>
     <name>Papyrus :: MCP</name>
-    <description>MCP server — SSE transport, six tool definitions</description>
+    <description>MCP server — Streamable HTTP transport, six tool definitions</description>
 
     <dependencies>
 

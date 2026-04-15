@@ -8,7 +8,7 @@ Self-hosted document intelligence MCP server. Ingest, index, and semantically se
 - OCR via Tesseract with optional Claude Sonnet post-processing to clean up output
 - Semantic search powered by Voyage AI embeddings and pgvector (cosine similarity)
 - REST API for document management and search
-- MCP server (SSE transport) for direct integration with AI assistants
+- MCP server (Streamable HTTP transport) for direct integration with AI assistants — works in claude.ai, Claude mobile, and Claude Code
 - Web UI for ingestion and search
 
 ## Architecture
@@ -18,7 +18,7 @@ papyrus-core        — Domain layer: records, enums, service interfaces, utilit
 papyrus-extractor   — Format routing and text extraction (no Spring, no I/O)
 papyrus-pipeline    — Spring beans: chunking, embeddings, pgvector storage, job tracking
 papyrus-api         — Spring Boot REST API + web UI  (port 8080)
-papyrus-mcp         — Spring Boot MCP server, SSE transport (port 8080)
+papyrus-mcp         — Spring Boot MCP server, Streamable HTTP transport (port 8080)
 papyrus-ui          — Static HTML/JS served by papyrus-api
 ```
 
@@ -193,27 +193,31 @@ The production stack is managed at `/opt/yard/papyrus/docker-compose.yml` and pu
 
 ## MCP Server
 
-The MCP server runs separately from the REST API and connects to the same database. It exposes 6 tools via SSE transport:
+The MCP server runs separately from the REST API and connects to the same database. It exposes 6 tools via Streamable HTTP transport (MCP spec 2025-03-26):
 
 | Tool | Description |
 |---|---|
-| `ingest_document` | Ingest a document file |
+| `ingest_document` | Ingest a document file (base64-encoded) |
 | `ingest_url` | Ingest from a URL |
 | `search` | Semantic search over ingested documents |
 | `list_sources` | List all ingested sources |
 | `get_document` | Retrieve a document by ID |
 | `delete_source` | Delete a source and its chunks |
 
-**Claude Desktop / Claude Code config:**
-```json
-{
-  "mcpServers": {
-    "papyrus": {
-      "url": "http://localhost:8082/sse"
-    }
-  }
-}
+**Endpoint:** `POST /mcp` (single endpoint handles all JSON-RPC messages)
+
+**Claude Code — global (available in all projects):**
+```bash
+claude mcp add --transport http --scope user papyrus http://localhost:8082/mcp
 ```
+
+**Claude Code — project scope (team-shared via `.mcp.json`):**
+```bash
+claude mcp add --transport http --scope project papyrus http://localhost:8082/mcp
+```
+
+**claude.ai browser / Claude mobile:**
+Go to **Settings → Connectors → Add Custom Connector** and enter the public MCP URL (e.g. `https://mcp-papyrus.example.com/mcp`). Changes sync automatically to the mobile app.
 
 ## Database Schema
 
