@@ -62,3 +62,5 @@ papyrus:
     overlap-tokens: ${CHUNKING_OVERLAP_TOKENS:64}
   search:
     default-top-k: ${SEARCH_TOP_K:5}
+  mcp:
+    public-url: ${MCP_PUBLIC_URL:https://mcp-papyrus.darqlab.net/mcp}
