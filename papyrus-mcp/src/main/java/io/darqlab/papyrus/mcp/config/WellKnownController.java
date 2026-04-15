@@ -10,31 +10,48 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Serves OAuth 2.0 Protected Resource Metadata (RFC 9728) at the well-known endpoint.
+ * Serves OAuth 2.0 discovery documents required by claude.ai remote MCP connectors.
  *
- * claude.ai and other MCP clients probe this endpoint before connecting to determine
- * whether the server requires OAuth. Returning an empty bearer_methods_supported list
- * signals that no bearer token auth is required and the client may proceed directly
- * with the MCP protocol.
+ * claude.ai probes these endpoints before connecting to determine whether OAuth
+ * is required and where the authorization endpoints are.
  *
- * Without this endpoint, claude.ai's connector setup flow fails with
- * "Couldn't reach the MCP server" even when CORS is correctly configured.
+ * RFC 9728 — Protected Resource Metadata  → /.well-known/oauth-protected-resource
+ * RFC 8414 — Authorization Server Metadata → /.well-known/oauth-authorization-server
  */
 @RestController
 public class WellKnownController {
 
+    private final String baseUrl;
     private final String resourceUrl;
 
     public WellKnownController(
+            @Value("${papyrus.mcp.base-url:https://mcp-papyrus.darqlab.net}") String baseUrl,
             @Value("${papyrus.mcp.public-url:https://mcp-papyrus.darqlab.net/mcp}") String resourceUrl) {
+        this.baseUrl     = baseUrl;
         this.resourceUrl = resourceUrl;
     }
 
+    /** RFC 9728 — tells the client where the authorization server is. */
     @GetMapping(value = "/.well-known/oauth-protected-resource", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Object>> oauthProtectedResource() {
+    public ResponseEntity<Map<String, Object>> protectedResource() {
         return ResponseEntity.ok(Map.of(
-                "resource", resourceUrl,
-                "bearer_methods_supported", List.of()
+                "resource",              resourceUrl,
+                "authorization_servers", List.of(baseUrl)
+        ));
+    }
+
+    /** RFC 8414 — authorization server capability discovery. */
+    @GetMapping(value = "/.well-known/oauth-authorization-server", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Object>> authorizationServer() {
+        return ResponseEntity.ok(Map.of(
+                "issuer",                                baseUrl,
+                "authorization_endpoint",               baseUrl + "/oauth/authorize",
+                "token_endpoint",                       baseUrl + "/oauth/token",
+                "registration_endpoint",                baseUrl + "/oauth/register",
+                "response_types_supported",             List.of("code"),
+                "grant_types_supported",                List.of("authorization_code"),
+                "code_challenge_methods_supported",     List.of("S256"),
+                "token_endpoint_auth_methods_supported", List.of("none")
         ));
     }
 }

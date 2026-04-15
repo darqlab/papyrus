@@ -26,12 +26,21 @@ public class CorsConfig implements WebMvcConfigurer {
                 .allowCredentials(false)
                 .maxAge(3600);
 
-        registry.addMapping("/.well-known/oauth-protected-resource")
+        registry.addMapping("/.well-known/**")
                 .allowedOrigins(
                         "https://claude.ai",
                         "https://api.anthropic.com"
                 )
                 .allowedMethods("GET", "OPTIONS")
+                .allowedHeaders("*")
+                .maxAge(3600);
+
+        registry.addMapping("/oauth/**")
+                .allowedOrigins(
+                        "https://claude.ai",
+                        "https://api.anthropic.com"
+                )
+                .allowedMethods("GET", "POST", "OPTIONS")
                 .allowedHeaders("*")
                 .maxAge(3600);
     }
