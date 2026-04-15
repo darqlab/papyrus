@@ -63,4 +63,5 @@ papyrus:
   search:
     default-top-k: ${SEARCH_TOP_K:5}
   mcp:
+    base-url: ${MCP_BASE_URL:https://mcp-papyrus.darqlab.net}
     public-url: ${MCP_PUBLIC_URL:https://mcp-papyrus.darqlab.net/mcp}
