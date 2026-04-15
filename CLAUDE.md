@@ -71,7 +71,7 @@ papyrus-core        — Spring-free domain layer (records, enums, service interf
 papyrus-extractor   — Spring-free format routing and text extraction (no I/O side effects)
 papyrus-pipeline    — Spring beans: chunking, embeddings, pgvector storage, job tracking, archive, chat providers
 papyrus-api         — Spring Boot REST API (port 8080/8081 in staging) — main runnable
-papyrus-mcp         — Spring Boot MCP server (SSE transport, Spring AI) — second runnable
+papyrus-mcp         — Spring Boot MCP server (Streamable HTTP transport, Spring AI) — second runnable
 ```
 
 Static HTML/JS UI is served by `papyrus-api` from `src/main/resources/static/`.
@@ -146,6 +146,8 @@ Same pattern applies to OCR correction via `OCR_PROMPT_FILE` / `prompts/ocr-corr
 ### MCP server (`papyrus-mcp`)
 
 Runs separately from the REST API. Tools defined in `IngestTools` and `SearchTools` using Spring AI `@Tool` annotations. Both runnables share the same `papyrus-pipeline` and `papyrus-extractor` modules and connect to the same PostgreSQL database.
+
+Transport: **Streamable HTTP** (`spring.ai.mcp.server.protocol: STREAMABLE`), endpoint `POST /mcp`. Requires Spring AI 1.1.x + Spring Boot 3.5.x. Compatible with claude.ai, Claude mobile, and Claude Code (`--transport http`).
 
 ## Key Configuration
 
