@@ -2,6 +2,8 @@ package io.darqlab.papyrus.extractor.impl;
 
 import io.darqlab.papyrus.core.domain.ExtractedText;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
@@ -47,6 +49,19 @@ class OfficeExtractorTest {
         assertTrue(result.content().isBlank());
     }
 
+    @Test
+    void extract_twoColumnTable_includesBothColumns() throws IOException {
+        byte[] docxBytes = buildTwoColumnDocx("Left column content", "Right column content");
+
+        ExtractedText result = extractor.extract(new ByteArrayInputStream(docxBytes), "two-column.docx");
+
+        assertNotNull(result);
+        assertTrue(result.content().contains("Left column content"),
+                "Left column should be extracted");
+        assertTrue(result.content().contains("Right column content"),
+                "Right column should be extracted — was previously dropped by getParagraphs()");
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private byte[] buildDocx(String... paragraphs) throws IOException {
@@ -56,6 +71,21 @@ class OfficeExtractorTest {
             for (String text : paragraphs) {
                 doc.createParagraph().createRun().setText(text);
             }
+            doc.write(out);
+            return out.toByteArray();
+        }
+    }
+
+    /** Simulates a two-column DOCX layout using a borderless table (one row, two cells). */
+    private byte[] buildTwoColumnDocx(String leftText, String rightText) throws IOException {
+        try (XWPFDocument doc = new XWPFDocument();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+
+            XWPFTable table = doc.createTable(1, 2);
+            XWPFTableRow row = table.getRow(0);
+            row.getCell(0).getParagraphs().get(0).createRun().setText(leftText);
+            row.getCell(1).getParagraphs().get(0).createRun().setText(rightText);
+
             doc.write(out);
             return out.toByteArray();
         }
