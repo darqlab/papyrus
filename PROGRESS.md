@@ -221,6 +221,41 @@
 
 ---
 
+## MCP Transport — Streamable HTTP ✅
+
+**Completed:** 2026-04-15
+
+Migrated the MCP server from the deprecated SSE transport to the current Streamable HTTP transport, making it compatible with claude.ai browser chat, Claude mobile, and Claude Desktop.
+
+### What changed
+
+| File | Change |
+|------|--------|
+| `pom.xml` | Spring Boot `3.3.5` → `3.5.13`; Spring AI `1.0.0` → `1.1.4` |
+| `papyrus-mcp/src/main/resources/application.yml` | Added `spring.ai.mcp.server.protocol: STREAMABLE` |
+| `papyrus-mcp/pom.xml` | Updated description |
+
+### Why Spring Boot had to be upgraded too
+
+Spring AI 1.0.x (all patch releases) uses MCP Java SDK 0.10.0, which only includes `WebMvcSseServerTransportProvider` (SSE). Streamable HTTP (`WebMvcStreamableServerTransportProvider`) was added in MCP SDK 0.16+, which is only available in Spring AI 1.1.x. Spring AI 1.1.x requires Spring Boot 3.5.x, so both had to move together.
+
+### Transport comparison
+
+| | SSE (old) | Streamable HTTP (new) |
+|--|-----------|----------------------|
+| Connect endpoint | `GET /sse` | — |
+| Message endpoint | `POST /mcp/message?sessionId=...` | `POST /mcp` |
+| Session model | Stateful (session ID per connection) | Stateless-friendly |
+| claude.ai / mobile | Not supported | Supported via Settings → Connectors |
+| MCP spec | 2024-11-05 | 2025-03-26 |
+
+### Key decisions
+
+- Stayed on `spring-ai-starter-mcp-server-webmvc` — same dependency, transport is now selected via the `protocol` property rather than a separate artifact
+- No code changes required in `McpConfig`, `IngestTools`, or `SearchTools` — the Spring AI tool API is stable across 1.0→1.1
+
+---
+
 ## Pending
 
 | # | Scope | Status |
