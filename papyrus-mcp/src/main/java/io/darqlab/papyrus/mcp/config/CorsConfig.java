@@ -25,5 +25,14 @@ public class CorsConfig implements WebMvcConfigurer {
                 .exposedHeaders("mcp-session-id")
                 .allowCredentials(false)
                 .maxAge(3600);
+
+        registry.addMapping("/.well-known/oauth-protected-resource")
+                .allowedOrigins(
+                        "https://claude.ai",
+                        "https://api.anthropic.com"
+                )
+                .allowedMethods("GET", "OPTIONS")
+                .allowedHeaders("*")
+                .maxAge(3600);
     }
 }
