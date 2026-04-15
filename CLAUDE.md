@@ -179,10 +179,19 @@ Transport: **Streamable HTTP** (`spring.ai.mcp.server.protocol: STREAMABLE`), en
 ## Staging Deployment
 
 Running stack managed at `/opt/yard/papyrus/` (separate from this repo):
-- `papyrus-api` → `localhost:8081`
-- `papyrus-mcp` → `localhost:8082`
+- `papyrus-api` → `localhost:8081` (public: `https://papyrus.darqlab.net`)
+- `papyrus-mcp` → `localhost:8082` (public: `https://mcp-papyrus.darqlab.net`)
 - `papyrus-pgvector` (pgvector/pgvector:pg16)
 
 Production images: `dennisarq/papyrus-api` and `dennisarq/papyrus-mcp` on Docker Hub.
 
-Search endpoint: `POST http://localhost:8081/api/search` with body `{"query":"...","topK":5}`
+Search endpoint: `POST https://papyrus.darqlab.net/api/search` with body `{"query":"...","topK":5}`
+
+## MCP Servers
+
+| Instance | URL |
+|----------|-----|
+| Staging (remote) | `https://mcp-papyrus.darqlab.net/sse` |
+| Local dev | `http://localhost:8082/sse` |
+
+Global Claude Code config (`~/.claude.json`) points `papyrus` to the staging SSE URL.
