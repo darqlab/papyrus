@@ -260,8 +260,9 @@ Spring AI 1.0.x (all patch releases) uses MCP Java SDK 0.10.0, which only includ
 
 | # | Scope | Status |
 |---|-------|--------|
-| #4 | Duplicate entry detection | Planned — plan at `docs/PLAN_DuplicateHandling.md` |
+| #4 | Duplicate entry detection | Planned — plan at `/home/dennis/devops/projects/papyrus/docs/PLAN_DuplicateHandling.md` |
 | #5 | Edit OCR verification text | Planned |
 | #7 | Rename ingested image from content | Planned |
+| — | Credit exhausted indicator (chat UI) | Planned — docs at `/home/dennis/devops/projects/papyrus/docs/` |
 | — | Auth (API key / OAuth2) | Planned |
 | — | Production hardening (rate limiting, observability) | Planned |
