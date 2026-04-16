@@ -3,9 +3,11 @@ package io.darqlab.papyrus.pipeline.chat;
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.core.http.StreamResponse;
+import com.anthropic.errors.AnthropicServiceException;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.RawMessageStreamEvent;
 import io.darqlab.papyrus.core.domain.ChatTurn;
+import io.darqlab.papyrus.core.exception.CreditExhaustedException;
 import io.darqlab.papyrus.core.service.ChatService;
 import io.darqlab.papyrus.pipeline.config.PapyrusProperties;
 import org.slf4j.Logger;
@@ -47,14 +49,45 @@ public class AnthropicChatService implements ChatService {
             else if ("assistant".equals(turn.role())) builder.addAssistantMessage(turn.content());
         }
 
-        StreamResponse<RawMessageStreamEvent> stream =
-                client.messages().createStreaming(builder.build());
+        StreamResponse<RawMessageStreamEvent> stream;
+        try {
+            stream = client.messages().createStreaming(builder.build());
+        } catch (RuntimeException e) {
+            throw translateToAppException(e);
+        }
 
         return stream.stream()
-                .flatMap(event -> event.contentBlockDelta()
-                        .flatMap(delta -> delta.delta().text())
-                        .map(text -> Stream.of(text.text()))
-                        .orElse(Stream.empty()))
+                .flatMap(event -> {
+                    try {
+                        return event.contentBlockDelta()
+                                .flatMap(delta -> delta.delta().text())
+                                .map(text -> Stream.of(text.text()))
+                                .orElse(Stream.empty());
+                    } catch (RuntimeException e) {
+                        throw translateToAppException(e);
+                    }
+                })
                 .onClose(stream::close);
+    }
+
+    private static RuntimeException translateToAppException(RuntimeException e) {
+        if (e instanceof CreditExhaustedException) return e;
+        if (isCreditError(e)) {
+            return new CreditExhaustedException("Anthropic API credit balance exhausted", e);
+        }
+        return e;
+    }
+
+    private static boolean isCreditError(Throwable e) {
+        if (!(e instanceof AnthropicServiceException svc)) return false;
+        if (svc.statusCode() == 402) return true;
+        if (svc.statusCode() == 429) {
+            String body = svc.body() != null ? svc.body().toString().toLowerCase() : "";
+            return body.contains("billing_error")
+                    || body.contains("credit balance")
+                    || body.contains("insufficient_quota")
+                    || body.contains("credit_balance_too_low");
+        }
+        return false;
     }
 }
