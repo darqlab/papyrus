@@ -338,6 +338,23 @@
     .bubble-pdf-btn:hover { background: #e5e7eb; color: #374151; border-color: #d1d5db; }
     .bubble-pdf-btn svg { width: 12px; height: 12px; }
 
+    /* ── Credit exhausted banner ─────────────────────────────────── */
+    .credit-exhausted-banner {
+      display: flex;
+      flex-direction: column;
+      gap: .45rem;
+      background: #fffbeb;
+      border: 1.5px solid #f59e0b;
+      border-radius: 10px;
+      padding: .85rem 1.1rem;
+      font-size: .9rem;
+      color: #92400e;
+      max-width: 88%;
+    }
+    .credit-exhausted-banner strong { color: #78350f; font-size: .95rem; }
+    .credit-exhausted-banner a { color: #b45309; font-weight: 600; text-decoration: underline; }
+    .credit-exhausted-banner a:hover { color: #92400e; }
+
     @media (max-width: 600px) {
       #sidebar { width: 60px; }
       #sidebar .logo { font-size: 0; padding: 0 0 1rem; text-align: center; }
@@ -621,6 +638,15 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
             try { usageData = JSON.parse(rawData); } catch (_) {}
           } else if (evtName === 'error') {
             bubble.innerHTML = `<span style="color:#dc2626">Error: ${esc(JSON.parse(rawData))}</span>`;
+            history.pop(); return;
+          } else if (evtName === 'credit_exhausted') {
+            bubble.innerHTML = '';
+            const banner = document.createElement('div');
+            banner.className = 'credit-exhausted-banner';
+            banner.innerHTML = `<strong>&#9888; Anthropic credit balance exhausted</strong>`
+              + `<span>This Papyrus instance has run out of Anthropic API credits and cannot generate a response.</span>`
+              + `<span>Top up your balance at <a href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener">console.anthropic.com/settings/billing</a>, then restart the service.</span>`;
+            bubble.appendChild(banner);
             history.pop(); return;
           } else if (rawData) {
             try {

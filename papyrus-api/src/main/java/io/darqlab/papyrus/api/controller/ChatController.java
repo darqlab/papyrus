@@ -3,10 +3,13 @@ package io.darqlab.papyrus.api.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.darqlab.papyrus.core.domain.ChatTurn;
 import io.darqlab.papyrus.core.domain.SearchResult;
+import io.darqlab.papyrus.core.exception.CreditExhaustedException;
 import io.darqlab.papyrus.core.service.ChatService;
 import io.darqlab.papyrus.core.service.EmbeddingService;
 import io.darqlab.papyrus.pipeline.config.PromptLoader;
 import io.darqlab.papyrus.pipeline.store.VectorStoreService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -20,6 +23,8 @@ import java.util.UUID;
 
 @RestController
 public class ChatController {
+
+    private static final Logger log = LoggerFactory.getLogger(ChatController.class);
 
     private final ChatService chatService;
     private final EmbeddingService embeddingService;
@@ -115,6 +120,13 @@ public class ChatController {
                 emitter.send(SseEmitter.event().name("done").data(""));
                 emitter.complete();
 
+            } catch (CreditExhaustedException e) {
+                log.warn("Anthropic credit exhausted: {}", e.getMessage());
+                try {
+                    emitter.send(SseEmitter.event().name("credit_exhausted")
+                            .data(mapper.writeValueAsString(e.getMessage())));
+                } catch (IOException ignored) {}
+                emitter.complete();
             } catch (Exception e) {
                 try {
                     emitter.send(SseEmitter.event().name("error")

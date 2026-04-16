@@ -4,6 +4,56 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > Global preferences: see /home/dennis/CLAUDE.md
 
+## Documentation Methodology
+
+> **MANDATORY — Do this before writing any code.**
+> Read the relevant docs in `/home/dennis/devops/projects/papyrus/docs/` and `/home/dennis/devops/methodology/` before starting any task. If the required IA/IP/TM docs do not exist yet, create them first and confirm with the user before proceeding to implementation.
+
+All feature work follows the 7-phase methodology defined at `/home/dennis/devops/methodology/`. Before implementing any feature or fix, create the required docs in `/home/dennis/devops/projects/papyrus/docs/` using the naming convention `{Module}_{Feature}_{Type}.md`.
+
+### Required docs per feature
+
+| Type | Acronym | When required | Template |
+|------|---------|--------------|---------|
+| Issue Analysis | IA | Always — describes the problem | — |
+| Technical Assessment | TA | Alternative to IA for bug/regression analysis | — |
+| Implementation Plan | IP | Always — step-by-step plan with file list | `PLAN_*.md` (current convention) |
+| Feature Rationale | FR | New features needing justification | — |
+| Task Management | TM | Always — tracks phase progress | — |
+| Architecture Decision Record | ADR | When a significant design decision is made | `ADR_{NNN}_{Title}.md` |
+| QA Checklist | QA | Post-implementation, recommended | — |
+
+### Compliance checklist
+
+Use `/home/dennis/devops/methodology/Documentation_Compliance_Checklist.md` to verify all required artefacts exist before marking a feature done and updating `PROGRESS.md`.
+
+### Key methodology references
+
+| File | Purpose |
+|------|---------|
+| `Development_Methodology_Guide.md` | End-to-end 7-phase lifecycle |
+| `Documentation_Compliance_Checklist.md` | Pre/during/post checklist per feature |
+| `java_application_structural_guide.md` | Java layering and module conventions |
+| `java_naming_convention_guide.md` | Java naming rules |
+| `TDD_Specification.md` | Test-driven development process |
+| `Project_Technical_Documentation.md` | Full project-level doc template |
+| `Document_Style_Guide.md` | Writing style for all docs |
+
+### Existing plan docs
+
+All docs live in `/home/dennis/devops/projects/papyrus/docs/`.
+
+| File | Feature |
+|------|---------|
+| `PLAN_DuplicateHandling.md` | Duplicate document detection (#4) — IP only |
+| `PLAN_CreditExhaustedIndicator.md` | Credit exhausted indicator — detailed code plan (✅ complete) |
+| `Papyrus_CreditExhaustedIndicator_IA.md` | Credit exhausted indicator — Issue Analysis (✅ complete) |
+| `Papyrus_CreditExhaustedIndicator_FR.md` | Credit exhausted indicator — Feature Rationale (✅ complete) |
+| `Papyrus_CreditExhaustedIndicator_IP.md` | Credit exhausted indicator — Implementation Plan (✅ complete) |
+| `Papyrus_CreditExhaustedIndicator_TM.md` | Credit exhausted indicator — Task Management (✅ complete) |
+
+---
+
 ## Build & Test Commands
 
 ```bash
