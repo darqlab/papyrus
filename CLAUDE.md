@@ -51,6 +51,9 @@ All docs live in `/home/dennis/devops/projects/papyrus/docs/`.
 | `Papyrus_CreditExhaustedIndicator_FR.md` | Credit exhausted indicator — Feature Rationale (✅ complete) |
 | `Papyrus_CreditExhaustedIndicator_IP.md` | Credit exhausted indicator — Implementation Plan (✅ complete) |
 | `Papyrus_CreditExhaustedIndicator_TM.md` | Credit exhausted indicator — Task Management (✅ complete) |
+| `Papyrus_FileSizeWarning_IA.md` | File size warning (#10) — Issue Analysis |
+| `Papyrus_FileSizeWarning_IP.md` | File size warning (#10) — Implementation Plan |
+| `Papyrus_FileSizeWarning_TM.md` | File size warning (#10) — Task Management |
 
 ---
 
@@ -87,22 +90,23 @@ The integration tests in `papyrus-pipeline` and `papyrus-api` use **Testcontaine
 
 ## Local Dev (Docker Compose)
 
-Two compose files in the project root:
+**Testing directory: `/opt/yard/papyrus/`** — use this for all local test runs. It contains `docker-compose.local.yml` which builds from `/home/dennis/Projects/papyrus` and reads real API keys from `/opt/yard/papyrus/.env`.
 
 ```bash
-# 1. Start the standalone DB (once — survives app rebuilds)
-docker compose -f docker-compose.db.yml up -d
-
-# 2. Build and start API + MCP
-docker compose up -d --build
-
-# 3. Rebuild just the API after a Maven build
+# Build the JAR first (from project root)
 mvn -pl papyrus-core,papyrus-extractor,papyrus-pipeline,papyrus-api install -DskipTests
-docker compose up -d --build papyrus-api
 
-# Stop app (DB keeps running)
-docker compose down
+# Rebuild and restart the API (from testing dir)
+docker compose -f /opt/yard/papyrus/docker-compose.local.yml up -d --build papyrus-api
+
+# Tail logs
+docker compose -f /opt/yard/papyrus/docker-compose.local.yml logs -f papyrus-api
+
+# Stop app
+docker compose -f /opt/yard/papyrus/docker-compose.local.yml down
 ```
+
+Two compose files in the project root (for reference / CI use):
 
 | File | Purpose |
 |------|---------|
