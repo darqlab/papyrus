@@ -256,6 +256,30 @@ Spring AI 1.0.x (all patch releases) uses MCP Java SDK 0.10.0, which only includ
 
 ---
 
+## Credit Exhausted Indicator ✅
+
+**Completed:** 2026-04-16
+
+When the Anthropic API account has no remaining credits, the chat UI now shows a clear amber warning banner instead of a generic red error.
+
+### What was built
+
+| Layer | Change |
+|-------|--------|
+| `papyrus-core` | New `CreditExhaustedException` (unchecked, two constructors) |
+| `papyrus-pipeline` | `AnthropicChatService` — detects HTTP 402 and billing 429; wraps as `CreditExhaustedException` at both eager (createStreaming) and lazy (flatMap) throw points |
+| `papyrus-api` | `ChatController` — dedicated `catch (CreditExhaustedException)` block emits `event: credit_exhausted` SSE event then calls `emitter.complete()` |
+| `papyrus-api` (UI) | `chat.html` — new `.credit-exhausted-banner` CSS (amber) and `credit_exhausted` SSE branch; clears thinking bubble, shows banner with link to Anthropic billing console, cleans up `history[]` |
+
+### Key decisions
+
+- Used `AnthropicServiceException` base class (not separate subtypes) for a single-catch approach covering 402 and billing 429
+- Two-point wrapping in `streamChat()` covers both eager and lazy SDK throws
+- `emitter.complete()` (not `completeWithError`) ensures the event is flushed before the response closes
+- Banner is amber (`#fffbeb` / `#f59e0b`) — visually distinct from the existing red generic error span
+
+---
+
 ## Pending
 
 | # | Scope | Status |
@@ -263,6 +287,6 @@ Spring AI 1.0.x (all patch releases) uses MCP Java SDK 0.10.0, which only includ
 | #4 | Duplicate entry detection | Planned — plan at `/home/dennis/devops/projects/papyrus/docs/PLAN_DuplicateHandling.md` |
 | #5 | Edit OCR verification text | Planned |
 | #7 | Rename ingested image from content | Planned |
-| — | Credit exhausted indicator (chat UI) | Planned — docs at `/home/dennis/devops/projects/papyrus/docs/` |
+| — | Credit exhausted indicator (chat UI) | ✅ Done — `feat/credit-exhausted-indicator` |
 | — | Auth (API key / OAuth2) | Planned |
 | — | Production hardening (rate limiting, observability) | Planned |

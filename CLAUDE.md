@@ -46,11 +46,11 @@ All docs live in `/home/dennis/devops/projects/papyrus/docs/`.
 | File | Feature |
 |------|---------|
 | `PLAN_DuplicateHandling.md` | Duplicate document detection (#4) — IP only |
-| `PLAN_CreditExhaustedIndicator.md` | Credit exhausted indicator — detailed code plan |
-| `Papyrus_CreditExhaustedIndicator_IA.md` | Credit exhausted indicator — Issue Analysis |
-| `Papyrus_CreditExhaustedIndicator_FR.md` | Credit exhausted indicator — Feature Rationale |
-| `Papyrus_CreditExhaustedIndicator_IP.md` | Credit exhausted indicator — Implementation Plan |
-| `Papyrus_CreditExhaustedIndicator_TM.md` | Credit exhausted indicator — Task Management |
+| `PLAN_CreditExhaustedIndicator.md` | Credit exhausted indicator — detailed code plan (✅ complete) |
+| `Papyrus_CreditExhaustedIndicator_IA.md` | Credit exhausted indicator — Issue Analysis (✅ complete) |
+| `Papyrus_CreditExhaustedIndicator_FR.md` | Credit exhausted indicator — Feature Rationale (✅ complete) |
+| `Papyrus_CreditExhaustedIndicator_IP.md` | Credit exhausted indicator — Implementation Plan (✅ complete) |
+| `Papyrus_CreditExhaustedIndicator_TM.md` | Credit exhausted indicator — Task Management (✅ complete) |
 
 ---
 
