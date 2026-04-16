@@ -246,7 +246,7 @@
         <div class="step" id="step3-lbl">3 · Save</div>
       </div>
       <div id="step1">
-        <label for="file-input">File (PDF, DOCX, TXT, HTML, MD, CSV, XLSX, PPTX, EPUB, PNG, JPG, TIFF…)</label>
+        <label for="file-input">File (PDF, DOCX, TXT, HTML, MD, CSV, XLSX, PPTX, EPUB, PNG, JPG, TIFF… — max 100 MB)</label>
         <input type="file" id="file-input"
           accept=".pdf,.docx,.txt,.html,.htm,.md,.csv,.xlsx,.pptx,.epub,.png,.jpg,.jpeg,.tiff,.tif,.bmp,.gif"
           onchange="onFileSelected(this)">
@@ -314,6 +314,7 @@
     'pdf','docx','txt','html','htm','md','csv','xlsx','pptx','epub',
     'png','jpg','jpeg','tiff','tif','bmp','gif'
   ]);
+  const MAX_FILE_BYTES = 100 * 1024 * 1024; // 100 MB — matches server multipart limit
 
   let currentFile     = null;
   let currentImageUrl = null;
@@ -336,6 +337,11 @@
       setStatus(document.getElementById('upload-status'), `Unsupported file type: .${ext}`, 'err');
       return;
     }
+    if (file.size > MAX_FILE_BYTES) {
+      setStatus(document.getElementById('upload-status'),
+        `File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum size is 100 MB.`, 'err');
+      return;
+    }
     const dt = new DataTransfer();
     dt.items.add(file);
     const input = document.getElementById('file-input');
@@ -347,6 +353,13 @@
   function onFileSelected(input) {
     if (!input.files.length) return;
     currentFile    = input.files[0];
+    if (currentFile.size > MAX_FILE_BYTES) {
+      setStatus(document.getElementById('upload-status'),
+        `File too large (${(currentFile.size / 1024 / 1024).toFixed(1)} MB). Maximum size is 100 MB.`, 'err');
+      input.value = '';
+      currentFile = null;
+      return;
+    }
     currentIsImage = IMAGE_TYPES.has(currentFile.type);
     const preview = document.getElementById('image-preview');
     const img     = document.getElementById('preview-img');
@@ -383,6 +396,7 @@
     try {
       const res  = await fetch(`${api}/api/documents/preview`, { method: 'POST', body: form });
       const data = await res.json();
+      if (res.status === 413) { setStatus(status, 'File too large. Maximum upload size is 100 MB.', 'err'); btn.disabled = false; return; }
       if (!res.ok) { setStatus(status, `Error ${res.status}`, 'err'); btn.disabled = false; return; }
       imgEl.src          = currentImageUrl;
       textEl.value       = data.text && data.text.trim() ? data.text : '';
@@ -427,6 +441,9 @@
         setStatus(saveStatus, `Processing "${data.filename}"…`, '');
         setStep(3);
         pollJob(data.jobId, saveStatus, () => { setTimeout(resetForm, 2500); }, () => { acceptBtn.disabled = false; });
+      } else if (res.status === 413) {
+        setStatus(saveStatus, 'File too large. Maximum upload size is 100 MB.', 'err');
+        acceptBtn.disabled = false;
       } else {
         setStatus(saveStatus, `Error ${res.status}: ${JSON.stringify(data)}`, 'err');
         acceptBtn.disabled = false;
@@ -462,6 +479,9 @@
       if (res.status === 202) {
         setStatus(status, `Processing "${data.filename}"…`, '');
         pollJob(data.jobId, status, resetForm, () => { btn.disabled = false; });
+      } else if (res.status === 413) {
+        setStatus(status, 'File too large. Maximum upload size is 100 MB.', 'err');
+        btn.disabled = false;
       } else {
         setStatus(status, `Error ${res.status}: ${JSON.stringify(data)}`, 'err');
         btn.disabled = false;
