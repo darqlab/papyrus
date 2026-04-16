@@ -51,6 +51,9 @@ All docs live in `/home/dennis/devops/projects/papyrus/docs/`.
 | `Papyrus_CreditExhaustedIndicator_FR.md` | Credit exhausted indicator — Feature Rationale (✅ complete) |
 | `Papyrus_CreditExhaustedIndicator_IP.md` | Credit exhausted indicator — Implementation Plan (✅ complete) |
 | `Papyrus_CreditExhaustedIndicator_TM.md` | Credit exhausted indicator — Task Management (✅ complete) |
+| `Papyrus_FileSizeWarning_IA.md` | File size warning (#10) — Issue Analysis |
+| `Papyrus_FileSizeWarning_IP.md` | File size warning (#10) — Implementation Plan |
+| `Papyrus_FileSizeWarning_TM.md` | File size warning (#10) — Task Management |
 
 ---
 
