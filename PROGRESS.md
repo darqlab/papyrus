@@ -288,5 +288,6 @@ When the Anthropic API account has no remaining credits, the chat UI now shows a
 | #5 | Edit OCR verification text | Planned |
 | #7 | Rename ingested image from content | Planned |
 | — | Credit exhausted indicator (chat UI) | ✅ Done — `feat/credit-exhausted-indicator` |
+| #10 | File size warning | ✅ Done — `fix/file-size-warning` |
 | — | Auth (API key / OAuth2) | Planned |
 | — | Production hardening (rate limiting, observability) | Planned |
