@@ -131,6 +131,7 @@
     .compare-pane { display: flex; flex-direction: column; gap: .5rem; }
     .compare-pane h3 { font-size: 1rem; font-weight: 600; color: #333; }
     .compare-pane img { width: 100%; border-radius: 6px; border: 1px solid #ced4da; object-fit: contain; max-height: 85vh; background: #f1f3f5; }
+    .compare-pane embed { width: 100%; border-radius: 6px; border: 1px solid #ced4da; height: 85vh; background: #f1f3f5; }
 
     /* Filename input */
     .filename-row { display: flex; align-items: center; gap: .6rem; margin-top: .5rem; }
@@ -285,8 +286,9 @@
       </p>
       <div class="compare-grid">
         <div class="compare-pane">
-          <h3>Original Image</h3>
-          <img id="compare-img" alt="uploaded image">
+          <h3 id="compare-orig-label">Original</h3>
+          <img id="compare-img" alt="uploaded image" style="display:none">
+          <embed id="compare-embed" type="application/pdf" style="display:none">
         </div>
         <div class="compare-pane">
           <h3>Extracted Text <span style="font-size:.8rem;font-weight:400;color:#6b7280">— editable</span></h3>
@@ -310,6 +312,7 @@
 <script>
   const api = '';
   const IMAGE_TYPES   = new Set(['image/png','image/jpeg','image/tiff','image/bmp','image/gif']);
+  const PREVIEW_TYPES = new Set(['image/png','image/jpeg','image/tiff','image/bmp','image/gif','application/pdf']);
   const ACCEPTED_EXTS = new Set([
     'pdf','docx','txt','html','htm','md','csv','xlsx','pptx','epub',
     'png','jpg','jpeg','tiff','tif','bmp','gif'
@@ -317,8 +320,9 @@
   const MAX_FILE_BYTES = 100 * 1024 * 1024; // 100 MB — matches server multipart limit
 
   let currentFile     = null;
-  let currentImageUrl = null;
+  let currentFileUrl  = null;
   let currentIsImage  = false;
+  let currentIsPdf    = false;
   let pendingText     = null;
 
   // ── Drag and drop ─────────────────────────────────────────────────
@@ -352,7 +356,7 @@
   // ── File selected ─────────────────────────────────────────────────
   function onFileSelected(input) {
     if (!input.files.length) return;
-    currentFile    = input.files[0];
+    currentFile   = input.files[0];
     if (currentFile.size > MAX_FILE_BYTES) {
       setStatus(document.getElementById('upload-status'),
         `File too large (${(currentFile.size / 1024 / 1024).toFixed(1)} MB). Maximum size is 100 MB.`, 'err');
@@ -361,20 +365,23 @@
       return;
     }
     currentIsImage = IMAGE_TYPES.has(currentFile.type);
-    const preview = document.getElementById('image-preview');
-    const img     = document.getElementById('preview-img');
+    currentIsPdf   = currentFile.type === 'application/pdf';
+    const canPreview = currentIsImage || currentIsPdf;
+    const preview  = document.getElementById('image-preview');
+    const img      = document.getElementById('preview-img');
     if (currentIsImage) {
-      if (currentImageUrl) URL.revokeObjectURL(currentImageUrl);
-      currentImageUrl = URL.createObjectURL(currentFile);
-      img.src = currentImageUrl;
+      if (currentFileUrl) URL.revokeObjectURL(currentFileUrl);
+      currentFileUrl = URL.createObjectURL(currentFile);
+      img.src = currentFileUrl;
       preview.style.display = 'block';
-      document.getElementById('extract-btn').style.display = '';
-      document.getElementById('direct-btn').style.display  = 'none';
     } else {
-      preview.style.display = 'none'; img.src = '';
-      document.getElementById('extract-btn').style.display = 'none';
-      document.getElementById('direct-btn').style.display  = '';
+      if (currentFileUrl) URL.revokeObjectURL(currentFileUrl);
+      currentFileUrl = canPreview ? URL.createObjectURL(currentFile) : null;
+      preview.style.display = 'none';
+      img.src = '';
     }
+    document.getElementById('extract-btn').style.display = canPreview ? '' : 'none';
+    document.getElementById('direct-btn').style.display  = canPreview ? 'none' : '';
     document.getElementById('comparison-wrap').classList.remove('visible');
     document.getElementById('upload-status').textContent = '';
     setStep(1);
@@ -386,6 +393,8 @@
     const btn       = document.getElementById('extract-btn');
     const panel     = document.getElementById('comparison');
     const imgEl     = document.getElementById('compare-img');
+    const embedEl   = document.getElementById('compare-embed');
+    const labelEl   = document.getElementById('compare-orig-label');
     const textEl    = document.getElementById('compare-text');
     const acceptBtn = document.getElementById('accept-btn');
     if (!currentFile) { setStatus(status, 'Select a file first.', 'err'); return; }
@@ -398,7 +407,17 @@
       const data = await res.json();
       if (res.status === 413) { setStatus(status, 'File too large. Maximum upload size is 100 MB.', 'err'); btn.disabled = false; return; }
       if (!res.ok) { setStatus(status, `Error ${res.status}`, 'err'); btn.disabled = false; return; }
-      imgEl.src          = currentImageUrl;
+      if (currentIsPdf) {
+        labelEl.textContent    = 'Original PDF';
+        embedEl.src            = currentFileUrl;
+        embedEl.style.display  = '';
+        imgEl.style.display    = 'none';
+      } else {
+        labelEl.textContent   = 'Original Image';
+        imgEl.src             = currentFileUrl;
+        imgEl.style.display   = '';
+        embedEl.style.display = 'none';
+      }
       textEl.value       = data.text && data.text.trim() ? data.text : '';
       textEl.placeholder = data.text && data.text.trim() ? '' : '(No text detected)';
       textEl.className   = 'ocr-text';
@@ -461,6 +480,8 @@
     textEl.value = ''; textEl.disabled = true; textEl.className = 'ocr-text ocr-loading';
     const filenameEl = document.getElementById('archive-filename');
     filenameEl.value = ''; filenameEl.disabled = true;
+    document.getElementById('compare-img').style.display   = 'none';
+    document.getElementById('compare-embed').style.display = 'none';
     pendingText = null; setStep(1);
   }
 
@@ -551,7 +572,10 @@
     document.getElementById('archive-filename').value     = '';
     document.getElementById('archive-filename').disabled  = true;
     document.getElementById('progress-wrap').classList.remove('visible');
-    currentFile = null; currentIsImage = false; pendingText = null;
+    document.getElementById('compare-img').style.display   = 'none';
+    document.getElementById('compare-embed').style.display = 'none';
+    if (currentFileUrl) { URL.revokeObjectURL(currentFileUrl); currentFileUrl = null; }
+    currentFile = null; currentIsImage = false; currentIsPdf = false; pendingText = null;
     setStep(1);
   }
 
