@@ -81,14 +81,20 @@ public class AnthropicChatService implements ChatService {
     private static boolean isCreditError(Throwable e) {
         if (!(e instanceof AnthropicServiceException svc)) return false;
         if (svc.statusCode() == 402) return true;
+
         String body = svc.body() != null ? svc.body().toString().toLowerCase() : "";
+        String message = svc.getMessage() != null ? svc.getMessage().toLowerCase() : "";
+
         if (svc.statusCode() == 429 || svc.statusCode() == 400) {
             return body.contains("billing_error")
                     || body.contains("credit balance")
                     || body.contains("insufficient_quota")
                     || body.contains("credit_balance_too_low")
                     || body.contains("api usage limit")
-                    || body.contains("usage limit");
+                    || body.contains("usage limit")
+                    || body.contains("you have reached your specified api usage limits")
+                    || message.contains("api usage limit")
+                    || message.contains("usage limit");
         }
         return false;
     }
