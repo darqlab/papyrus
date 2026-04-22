@@ -94,6 +94,51 @@ class SmartPdfExtractorTest {
         verify(ocr).extractPage(any(), any(), eq(1));
     }
 
+    @Test
+    void extract_exactlyAtThreshold_usesDigital() throws IOException {
+        // CHARS_PER_PAGE_THRESHOLD == 100.0; exactly 100 chars must use digital, not OCR
+        String text = "A".repeat((int) SmartPdfExtractor.CHARS_PER_PAGE_THRESHOLD);
+        byte[] pdfBytes = buildPdf(text);
+
+        OcrExtractor ocr = mock(OcrExtractor.class);
+        SmartPdfExtractor extractor = new SmartPdfExtractor(ocr);
+        ExtractedText result = extractor.extract(new ByteArrayInputStream(pdfBytes), "boundary.pdf");
+
+        assertFalse(result.ocrUsed());
+        verifyNoInteractions(ocr);
+    }
+
+    @Test
+    void extract_sparseText_usesOcr() throws IOException {
+        // PDFTextStripper adds trailing whitespace; use a clearly sub-threshold value (10 chars)
+        // to ensure digital extraction yields < CHARS_PER_PAGE_THRESHOLD regardless of padding.
+        String text = "A".repeat(10);
+        byte[] pdfBytes = buildPdf(text);
+
+        OcrExtractor ocr = mock(OcrExtractor.class);
+        when(ocr.extractPage(any(), any(), eq(0))).thenReturn("ocr result");
+
+        SmartPdfExtractor extractor = new SmartPdfExtractor(ocr);
+        ExtractedText result = extractor.extract(new ByteArrayInputStream(pdfBytes), "sparse.pdf");
+
+        assertTrue(result.ocrUsed());
+        verify(ocr).extractPage(any(), any(), eq(0));
+    }
+
+    @Test
+    void extract_digitalPdf_pageCountMatches() throws IOException {
+        byte[] pdfBytes = buildMultiPagePdf("A".repeat(200), "B".repeat(200), "C".repeat(200));
+
+        OcrExtractor ocr = mock(OcrExtractor.class);
+        SmartPdfExtractor extractor = new SmartPdfExtractor(ocr);
+        ExtractedText result = extractor.extract(new ByteArrayInputStream(pdfBytes), "three-pages.pdf");
+
+        assertFalse(result.ocrUsed());
+        assertEquals(3, result.pageCount());
+        assertEquals(3, result.pageTexts().size());
+        verifyNoInteractions(ocr);
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /** Builds a single-page PDF. Pass null for a blank page (no text layer). */
