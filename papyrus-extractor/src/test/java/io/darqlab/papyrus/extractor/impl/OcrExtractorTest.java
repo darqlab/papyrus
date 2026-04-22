@@ -44,4 +44,30 @@ class OcrExtractorTest {
             assertEquals(300f, dpi, 0.01f);
         }
     }
+
+    @Test
+    void safeDpi_landscapeLargePage_capsBasedOnWidth() throws Exception {
+        // Landscape variant of the large scanner page: width (3432) is the longest dimension.
+        // Verifies that Math.max correctly picks the width, not the height.
+        try (PDDocument doc = new PDDocument()) {
+            doc.addPage(new PDPage(new PDRectangle(3432, 2642)));
+            float dpi = OcrExtractor.safeDpi(doc, 0);
+            assertTrue(dpi < 300f, "DPI should be capped when width is the longest side, got: " + dpi);
+            float longestInch = 3432f / 72f;
+            float renderedPixels = longestInch * dpi;
+            assertTrue(renderedPixels <= OcrExtractor.MAX_RENDER_PIXELS + 1,
+                    "Rendered longest side should not exceed MAX_RENDER_PIXELS, got: " + renderedPixels);
+        }
+    }
+
+    @Test
+    void safeDpi_pageSizeJustAboveBoundary_capsSlightlyBelow300() throws Exception {
+        // Longest side = 984 pts → longestInch ≈ 13.67"
+        // 300 DPI would render 4100 px > MAX_RENDER_PIXELS (4096), so it must cap
+        try (PDDocument doc = new PDDocument()) {
+            doc.addPage(new PDPage(new PDRectangle(100, 984)));
+            float dpi = OcrExtractor.safeDpi(doc, 0);
+            assertTrue(dpi < 300f, "DPI should be capped for page just above boundary, got: " + dpi);
+        }
+    }
 }

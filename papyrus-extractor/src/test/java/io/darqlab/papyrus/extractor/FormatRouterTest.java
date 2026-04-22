@@ -89,6 +89,12 @@ class FormatRouterTest {
         assertTrue(result.content().contains("Direct MIME routing"));
     }
 
+    @Test
+    void routeByMimeType_unknownMime_throwsUnsupportedFormatException() {
+        assertThrows(UnsupportedFormatException.class, () ->
+                router.routeByMimeType(toStream("data"), "file", "application/x-unknown"));
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private byte[] buildPdf(String text) throws IOException {
