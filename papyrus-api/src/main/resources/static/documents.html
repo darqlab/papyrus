@@ -6,7 +6,7 @@
   <title>Papyrus — Documents</title>
   <script>
     (function() {
-      const theme = localStorage.getItem('papyrus-theme') || 'light';
+      const theme = localStorage.getItem('papyrus-theme') || 'dark';
       if (theme === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
       }
@@ -183,7 +183,7 @@
   </nav>
   <div id="sidebar-footer">
     <button id="theme-toggle" style="background: none; border: none; color: #a0a0c0; font-size: 1.1rem; cursor: pointer; padding: 0.4rem; margin-right: auto;" title="Toggle dark mode">
-      <span id="theme-icon">🌙</span>
+      <span id="theme-icon">☀️</span>
     </button>
     <div class="health-dot" id="health-dot"></div>
     <span id="health-label">Connecting…</span>

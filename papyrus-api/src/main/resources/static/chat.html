@@ -6,7 +6,7 @@
   <title>Papyrus — Chat</title>
   <script>
     (function() {
-      const theme = localStorage.getItem('papyrus-theme') || 'light';
+      const theme = localStorage.getItem('papyrus-theme') || 'dark';
       if (theme === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
       }
@@ -166,14 +166,27 @@
       font-size: .95rem;
       word-break: break-word;
     }
+    :root {
+      --user-bubble-bg: #ede9fe;
+      --user-bubble-text: #1e1b4b;
+      --assistant-bubble-bg: #ffffff;
+      --assistant-bubble-text: #111827;
+    }
+    [data-theme="dark"] {
+      --user-bubble-bg: #4c1d95;
+      --user-bubble-text: #f3e8ff;
+      --assistant-bubble-bg: #2a2a3a;
+      --assistant-bubble-text: #e8e8f0;
+    }
+
     .msg.user .bubble {
-      background: #ede9fe;
-      color: #1e1b4b;
+      background: var(--user-bubble-bg);
+      color: var(--user-bubble-text);
       border-radius: 18px 4px 18px 18px;
     }
     .msg.assistant .bubble {
-      background: var(--surface);
-      color: #111827;
+      background: var(--assistant-bubble-bg);
+      color: var(--assistant-bubble-text);
       border-radius: 4px 18px 18px 18px;
       box-shadow: 0 1px 3px rgba(0,0,0,.08);
     }
@@ -389,6 +402,27 @@
     .credit-exhausted-banner a { color: #b45309; font-weight: 600; text-decoration: underline; }
     .credit-exhausted-banner a:hover { color: #92400e; }
 
+    .error-banner {
+      background: #fee2e2;
+      border-left: 4px solid #dc2626;
+      border-radius: 6px;
+      padding: 1rem;
+      margin: .5rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+    }
+    [data-theme="dark"] .error-banner {
+      background: #7f1d1d;
+      border-left-color: #ef4444;
+    }
+    .error-banner strong { color: #7f1d1d; font-size: .95rem; }
+    [data-theme="dark"] .error-banner strong { color: #fecaca; }
+    .error-banner a { color: #b91c1c; font-weight: 600; text-decoration: underline; }
+    [data-theme="dark"] .error-banner a { color: #fca5a5; }
+    .error-banner a:hover { color: #991b1b; }
+    [data-theme="dark"] .error-banner a:hover { color: #f87171; }
+
     @media (max-width: 600px) {
       #sidebar { width: 60px; }
       #sidebar .logo { font-size: 0; padding: 0 0 1rem; text-align: center; }
@@ -426,7 +460,7 @@
 
   <div id="sidebar-footer">
     <button id="theme-toggle" style="background: none; border: none; color: #a0a0c0; font-size: 1.1rem; cursor: pointer; padding: 0.4rem; margin-right: auto;" title="Toggle dark mode">
-      <span id="theme-icon">🌙</span>
+      <span id="theme-icon">☀️</span>
     </button>
     <div class="health-dot" id="health-dot"></div>
     <span id="health-label">Connecting…</span>
@@ -642,7 +676,23 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
       });
 
       if (!res.ok) {
-        bubble.innerHTML = `<span style="color:#dc2626">Error ${res.status}</span>`;
+        let errorMsg = `Error ${res.status}`;
+        try {
+          const errorData = await res.json();
+          if (errorData.error?.message) {
+            errorMsg = errorData.error.message;
+          } else if (typeof errorData === 'string') {
+            errorMsg = errorData;
+          }
+        } catch (_) {}
+
+        const banner = document.createElement('div');
+        banner.className = 'error-banner';
+        banner.innerHTML = `<strong>&#9888; ${esc(errorMsg)}</strong>`;
+        if (errorMsg.includes('API usage') || errorMsg.includes('limit')) {
+          banner.innerHTML += `<span>Check your API account at <a href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener">console.anthropic.com</a></span>`;
+        }
+        bubble.appendChild(banner);
         history.pop(); return;
       }
 
