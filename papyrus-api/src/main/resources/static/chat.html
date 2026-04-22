@@ -166,14 +166,27 @@
       font-size: .95rem;
       word-break: break-word;
     }
+    :root {
+      --user-bubble-bg: #ede9fe;
+      --user-bubble-text: #1e1b4b;
+      --assistant-bubble-bg: #ffffff;
+      --assistant-bubble-text: #111827;
+    }
+    [data-theme="dark"] {
+      --user-bubble-bg: #4c1d95;
+      --user-bubble-text: #f3e8ff;
+      --assistant-bubble-bg: #2a2a3a;
+      --assistant-bubble-text: #e8e8f0;
+    }
+
     .msg.user .bubble {
-      background: #ede9fe;
-      color: #1e1b4b;
+      background: var(--user-bubble-bg);
+      color: var(--user-bubble-text);
       border-radius: 18px 4px 18px 18px;
     }
     .msg.assistant .bubble {
-      background: var(--surface);
-      color: #111827;
+      background: var(--assistant-bubble-bg);
+      color: var(--assistant-bubble-text);
       border-radius: 4px 18px 18px 18px;
       box-shadow: 0 1px 3px rgba(0,0,0,.08);
     }
