@@ -41,9 +41,15 @@ papyrus:
       "[western mindanao mission]": wmm
 
   chunking:
-    strategy: paragraph
-    max-tokens: 512
-    overlap-tokens: 64
+    strategy: ${CHUNKING_STRATEGY:PARAGRAPH}
+    max-tokens: ${CHUNKING_MAX_TOKENS:512}
+    overlap-tokens: ${CHUNKING_OVERLAP_TOKENS:64}
+    semantic:
+      threshold: ${CHUNKING_SEMANTIC_THRESHOLD:0.75}
+      min-sentences: ${CHUNKING_SEMANTIC_MIN_SENTENCES:3}
+    section:
+      pattern: ${CHUNKING_SECTION_PATTERN:^\\d\{3\}(\\.\\d\{2,3\})+\\s+\\S}
+      min-tokens: ${CHUNKING_SECTION_MIN_TOKENS:50}
   search:
     default-top-k: 5
 

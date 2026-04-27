@@ -2,6 +2,7 @@ package io.darqlab.papyrus.api.controller;
 
 import io.darqlab.papyrus.api.controller.dto.*;
 import io.darqlab.papyrus.api.service.DocumentService;
+import io.darqlab.papyrus.pipeline.config.ChunkingStrategy;
 import io.darqlab.papyrus.core.domain.IngestionJob;
 import io.darqlab.papyrus.core.domain.Source;
 import io.darqlab.papyrus.pipeline.archive.ArchiveService;
@@ -51,7 +52,11 @@ public class DocumentController {
             @RequestPart("file") MultipartFile file,
             @RequestParam(value = "language", defaultValue = "eng") String language,
             @RequestParam(value = "extractedText", required = false) String extractedText,
-            @RequestParam(value = "archiveFilename", required = false) String archiveFilename) throws IOException {
+            @RequestParam(value = "archiveFilename", required = false) String archiveFilename,
+            @RequestParam(value = "chunkingStrategy", required = false) ChunkingStrategy chunkingStrategy,
+            @RequestParam(value = "chunkingMaxTokens", required = false) Integer chunkingMaxTokens,
+            @RequestParam(value = "chunkingOverlapTokens", required = false) Integer chunkingOverlapTokens)
+            throws IOException {
 
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().build();
@@ -65,7 +70,8 @@ public class DocumentController {
 
         Thread.ofVirtual().start(() -> {
             try {
-                documentService.ingest(content, filename, language, extractedText, archiveFilename);
+                documentService.ingest(content, filename, language, extractedText, archiveFilename,
+                        chunkingStrategy, chunkingMaxTokens, chunkingOverlapTokens);
                 jobService.recordSuccess(job.id());
                 jobService.markDone(job.id());
             } catch (Exception e) {
@@ -89,7 +95,8 @@ public class DocumentController {
         List<SourceResponse> sources = vectorStoreService.listSources(limit, offset)
                 .stream()
                 .map(s -> new SourceResponse(s.id(), s.filename(), s.archiveFilename(), s.archiveSourceId(),
-                        s.contentType(), s.status(), s.createdAt()))
+                        s.contentType(), s.status(), s.createdAt(),
+                        s.chunkingStrategy(), s.chunkingMaxTokens(), s.chunkingOverlapTokens()))
                 .toList();
 
         return ResponseEntity.ok(sources);
@@ -105,7 +112,8 @@ public class DocumentController {
         if (s == null) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(new SourceResponse(
                 s.id(), s.filename(), s.archiveFilename(), s.archiveSourceId(),
-                s.contentType(), s.status(), s.createdAt()));
+                s.contentType(), s.status(), s.createdAt(),
+                s.chunkingStrategy(), s.chunkingMaxTokens(), s.chunkingOverlapTokens()));
     }
 
     /**

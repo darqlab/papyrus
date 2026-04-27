@@ -60,6 +60,9 @@ All docs live in `/home/dennis/devops/projects/papyrus/docs/`.
 | `Papyrus_OcrProviders_IA.md` | Configurable OCR correction providers — Issue Analysis |
 | `Papyrus_OcrProviders_IP.md` | Configurable OCR correction providers — Implementation Plan |
 | `Papyrus_OcrProviders_TM.md` | Configurable OCR correction providers — Task Management |
+| `Papyrus_PerSourceChunkingStrategy_IA.md` | Per-source chunking strategy (PARAGRAPH/SECTION/SEMANTIC) — Issue Analysis (Draft) |
+| `Papyrus_PerSourceChunkingStrategy_IP.md` | Per-source chunking strategy — Implementation Plan (Draft) |
+| `Papyrus_PerSourceChunkingStrategy_TM.md` | Per-source chunking strategy — Task Management (Draft) |
 
 ---
 
@@ -233,6 +236,13 @@ Transport: **Streamable HTTP** (`spring.ai.mcp.server.protocol: STREAMABLE`), en
 | `EVOLINK_API_KEY` | Required when `CHAT_PROVIDER=evolink` or `OCR_PROVIDER=evolink` — Evolink AI bearer token (`sk-evo-...`) |
 | `EVOLINK_BASE_URL` | Evolink base URL (default: `https://direct.evolink.ai`; only used when `CHAT_PROVIDER=evolink`) |
 | `CHAT_EVOLINK_MODEL` | Evolink model name (default: `evolink/auto`; only used when `CHAT_PROVIDER=evolink`) |
+| `CHUNKING_STRATEGY` | Global chunking strategy: `PARAGRAPH` (default), `SECTION`, `SEMANTIC`, `FIXED` |
+| `CHUNKING_MAX_TOKENS` | Global max tokens per chunk (default: `512`) |
+| `CHUNKING_OVERLAP_TOKENS` | Global overlap tokens between chunks (default: `64`) |
+| `CHUNKING_SEMANTIC_THRESHOLD` | Cosine similarity breakpoint for SEMANTIC strategy (default: `0.75`) |
+| `CHUNKING_SEMANTIC_MIN_SENTENCES` | Minimum sentences before a semantic break (default: `3`) |
+| `CHUNKING_SECTION_PATTERN` | Regex for section header detection in SECTION strategy (default: `^\d{3}(\.\d{2,3})+\s+\S`) |
+| `CHUNKING_SECTION_MIN_TOKENS` | Minimum tokens before merging small sections (default: `50`) |
 
 ## LLM & Embedding Model Selection
 

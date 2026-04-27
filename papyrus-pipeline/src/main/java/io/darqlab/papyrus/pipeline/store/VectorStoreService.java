@@ -131,8 +131,10 @@ public class VectorStoreService {
     }
 
     private Source toSource(DocumentSourceEntity e) {
+        String strategy = e.getChunkingStrategy() != null ? e.getChunkingStrategy().name() : null;
         return new Source(e.getId(), e.getFilename(), e.getArchiveFilename(),
-                e.getArchiveSourceId(), e.getContentType(), e.getStatus(), e.getCreatedAt());
+                e.getArchiveSourceId(), e.getContentType(), e.getStatus(), e.getCreatedAt(),
+                strategy, e.getChunkingMaxTokens(), e.getChunkingOverlapTokens());
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

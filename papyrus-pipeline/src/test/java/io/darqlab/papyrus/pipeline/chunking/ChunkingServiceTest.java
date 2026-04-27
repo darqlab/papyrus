@@ -1,10 +1,12 @@
 package io.darqlab.papyrus.pipeline.chunking;
 
 import io.darqlab.papyrus.core.domain.ExtractedText;
+import io.darqlab.papyrus.core.service.EmbeddingService;
 import io.darqlab.papyrus.pipeline.config.ChunkingStrategy;
 import io.darqlab.papyrus.pipeline.config.PapyrusProperties;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -16,14 +18,20 @@ class ChunkingServiceTest {
                 new PapyrusProperties.EmbeddingProperties("voyage",
                         new PapyrusProperties.VoyageProperties("key", "voyage-3-lite"),
                         new PapyrusProperties.OllamaProperties("http://localhost:11434", "nomic-embed-text")),
-                new PapyrusProperties.ChunkingProperties(strategy, maxTokens, overlapTokens),
+                new PapyrusProperties.ChunkingProperties(strategy, maxTokens, overlapTokens,
+                        new PapyrusProperties.SemanticChunkingProperties(0.75f, 3),
+                        new PapyrusProperties.SectionChunkingProperties("^\\d{3}(\\.\\d{2,3})+\\s+\\S", 50)),
                 new PapyrusProperties.SearchProperties(5),
                 new PapyrusProperties.OcrProperties(
                         new PapyrusProperties.CorrectionProperties(false, null, null, null, null, null)),
                 new PapyrusProperties.ArchiveProperties(false, null, null),
                 null
         );
-        return new ChunkingService(props);
+        EmbeddingService noopEmbedding = new EmbeddingService() {
+            @Override public List<Float> embed(String text) { return Collections.emptyList(); }
+            @Override public int getDimensions() { return 512; }
+        };
+        return new ChunkingService(props, noopEmbedding);
     }
 
     // ── Paragraph strategy ────────────────────────────────────────────────────

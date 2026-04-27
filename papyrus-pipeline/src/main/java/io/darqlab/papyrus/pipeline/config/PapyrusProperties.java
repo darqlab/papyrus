@@ -26,8 +26,14 @@ public record PapyrusProperties(
     public record ChunkingProperties(
             ChunkingStrategy strategy,
             int maxTokens,
-            int overlapTokens
+            int overlapTokens,
+            SemanticChunkingProperties semantic,
+            SectionChunkingProperties section
     ) {}
+
+    public record SemanticChunkingProperties(float threshold, int minSentences) {}
+
+    public record SectionChunkingProperties(String pattern, int minTokens) {}
 
     public record SearchProperties(int defaultTopK) {}
 

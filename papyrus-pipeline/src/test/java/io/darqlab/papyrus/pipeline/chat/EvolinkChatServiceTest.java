@@ -19,7 +19,9 @@ class EvolinkChatServiceTest {
                 new PapyrusProperties.EmbeddingProperties("voyage",
                         new PapyrusProperties.VoyageProperties("key", "voyage-3-lite"),
                         new PapyrusProperties.OllamaProperties("http://localhost:11434", "nomic-embed-text")),
-                new PapyrusProperties.ChunkingProperties(ChunkingStrategy.PARAGRAPH, 512, 64),
+                new PapyrusProperties.ChunkingProperties(ChunkingStrategy.PARAGRAPH, 512, 64,
+                        new PapyrusProperties.SemanticChunkingProperties(0.75f, 3),
+                        new PapyrusProperties.SectionChunkingProperties("^\\d{3}(\\.\\d{2,3})+\\s+\\S", 50)),
                 new PapyrusProperties.SearchProperties(5),
                 new PapyrusProperties.OcrProperties(
                         new PapyrusProperties.CorrectionProperties(false, null, null, null, null, null)),

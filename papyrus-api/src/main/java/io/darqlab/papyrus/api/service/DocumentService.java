@@ -8,7 +8,10 @@ import io.darqlab.papyrus.core.util.MimeTypeDetector;
 import io.darqlab.papyrus.core.util.TokenEstimator;
 import io.darqlab.papyrus.extractor.FormatRouter;
 import io.darqlab.papyrus.pipeline.archive.ArchiveService;
+import io.darqlab.papyrus.pipeline.chunking.ChunkingConfig;
 import io.darqlab.papyrus.pipeline.chunking.ChunkingService;
+import io.darqlab.papyrus.pipeline.config.ChunkingStrategy;
+import io.darqlab.papyrus.pipeline.config.PapyrusProperties;
 import io.darqlab.papyrus.pipeline.ocr.OcrCorrectionService;
 import io.darqlab.papyrus.pipeline.store.VectorStoreService;
 import io.darqlab.papyrus.pipeline.store.entity.DocumentSourceEntity;
@@ -36,6 +39,7 @@ public class DocumentService {
     private final DocumentSourceRepository sourceRepository;
     private final OcrCorrectionService ocrCorrectionService;
     private final ArchiveService archiveService;
+    private final PapyrusProperties properties;
 
     public DocumentService(FormatRouter formatRouter,
                            ChunkingService chunkingService,
@@ -43,7 +47,8 @@ public class DocumentService {
                            VectorStoreService vectorStoreService,
                            DocumentSourceRepository sourceRepository,
                            OcrCorrectionService ocrCorrectionService,
-                           ArchiveService archiveService) {
+                           ArchiveService archiveService,
+                           PapyrusProperties properties) {
         this.formatRouter          = formatRouter;
         this.chunkingService       = chunkingService;
         this.embeddingService      = embeddingService;
@@ -51,26 +56,39 @@ public class DocumentService {
         this.sourceRepository      = sourceRepository;
         this.ocrCorrectionService  = ocrCorrectionService;
         this.archiveService        = archiveService;
+        this.properties            = properties;
     }
 
     @Transactional
     public IngestionResult ingest(byte[] content, String filename, String language) {
-        return ingest(content, filename, language, null, null);
+        return ingest(content, filename, language, null, null, null, null, null);
     }
 
     @Transactional
     public IngestionResult ingest(byte[] content, String filename, String language, String preExtractedText) {
-        return ingest(content, filename, language, preExtractedText, null);
+        return ingest(content, filename, language, preExtractedText, null, null, null, null);
     }
 
     @Transactional
     public IngestionResult ingest(byte[] content, String filename, String language, String preExtractedText, String archiveFilename) {
+        return ingest(content, filename, language, preExtractedText, archiveFilename, null, null, null);
+    }
+
+    @Transactional
+    public IngestionResult ingest(byte[] content, String filename, String language,
+                                   String preExtractedText, String archiveFilename,
+                                   ChunkingStrategy chunkingStrategy,
+                                   Integer chunkingMaxTokens,
+                                   Integer chunkingOverlapTokens) {
         String mimeType = MimeTypeDetector.detect(filename);
         UUID sourceId   = UUID.randomUUID();
 
         DocumentSourceEntity source = new DocumentSourceEntity(
                 sourceId, filename, mimeType, (long) content.length,
                 language, IngestionStatus.PROCESSING);
+        source.setChunkingStrategy(chunkingStrategy);
+        source.setChunkingMaxTokens(chunkingMaxTokens);
+        source.setChunkingOverlapTokens(chunkingOverlapTokens);
         sourceRepository.saveAndFlush(source);
         try {
             ExtractedText extracted;
@@ -99,7 +117,8 @@ public class DocumentService {
                 source.setArchiveFilename(archivedAs);
             }
 
-            List<String> chunks = chunkingService.chunk(extracted);
+            ChunkingConfig config = resolveConfig(chunkingStrategy, chunkingMaxTokens, chunkingOverlapTokens);
+            List<String> chunks = chunkingService.chunk(extracted, config);
 
             source.setPageCount(extracted.pageCount());
 
@@ -190,11 +209,18 @@ public class DocumentService {
                 "eng", IngestionStatus.PROCESSING);
         source.setArchiveFilename(original.archiveFilename());
         source.setArchiveSourceId(archiveDirId);
+        // Propagate stored chunking config so re-ingest produces identical chunk boundaries
+        ChunkingStrategy storedStrategy = original.chunkingStrategy() != null
+                ? ChunkingStrategy.valueOf(original.chunkingStrategy()) : null;
+        source.setChunkingStrategy(storedStrategy);
+        source.setChunkingMaxTokens(original.chunkingMaxTokens());
+        source.setChunkingOverlapTokens(original.chunkingOverlapTokens());
         sourceRepository.saveAndFlush(source);
 
         try {
             ExtractedText extracted = ExtractedText.of(extractedText);
-            List<String> chunks = chunkingService.chunk(extracted);
+            ChunkingConfig config = resolveConfig(storedStrategy, original.chunkingMaxTokens(), original.chunkingOverlapTokens());
+            List<String> chunks = chunkingService.chunk(extracted, config);
 
             source.setPageCount(extracted.pageCount());
 
@@ -221,6 +247,14 @@ public class DocumentService {
     }
 
     public record IngestionResult(UUID sourceId, String filename, int chunkCount) {}
+
+    private ChunkingConfig resolveConfig(ChunkingStrategy strategy, Integer maxTokens, Integer overlapTokens) {
+        return new ChunkingConfig(
+                strategy     != null ? strategy     : properties.chunking().strategy(),
+                maxTokens    != null ? maxTokens    : properties.chunking().maxTokens(),
+                overlapTokens != null ? overlapTokens : properties.chunking().overlapTokens()
+        );
+    }
 
     private static String stripExtension(String filename) {
         int dot = filename.lastIndexOf('.');
