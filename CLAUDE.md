@@ -214,6 +214,7 @@ Transport: **Streamable HTTP** (`spring.ai.mcp.server.protocol: STREAMABLE`), en
 | Env var | Purpose |
 |---------|---------|
 | `VOYAGE_API_KEY` | Required — Voyage AI embeddings |
+| `VOYAGE_MODEL` | Embedding model (default: `voyage-3-lite`); alternatives: `voyage-large-2-1`, `voyage-2` |
 | `ANTHROPIC_API_KEY` | Required when `CHAT_PROVIDER=anthropic` or `OCR_PROVIDER=anthropic` |
 | `DATABASE_URL` | PostgreSQL JDBC URL (default: `jdbc:postgresql://localhost:5432/papyrus`) |
 | `OCR_CORRECTION_ENABLED` | `true` to enable LLM post-processing of Tesseract output |
@@ -232,6 +233,32 @@ Transport: **Streamable HTTP** (`spring.ai.mcp.server.protocol: STREAMABLE`), en
 | `EVOLINK_API_KEY` | Required when `CHAT_PROVIDER=evolink` or `OCR_PROVIDER=evolink` — Evolink AI bearer token (`sk-evo-...`) |
 | `EVOLINK_BASE_URL` | Evolink base URL (default: `https://direct.evolink.ai`; only used when `CHAT_PROVIDER=evolink`) |
 | `CHAT_EVOLINK_MODEL` | Evolink model name (default: `evolink/auto`; only used when `CHAT_PROVIDER=evolink`) |
+
+## LLM & Embedding Model Selection
+
+OCR correction, chat, and embedding services use configurable models. Model selection affects cost, speed, and capability.
+
+| Service | Default Model | Alternatives | Config |
+|---------|---------------|--------------|--------|
+| **Embedding (Voyage)** | `voyage-3-lite` (512 dims, balanced) | `voyage-large-2-1`, `voyage-2` | `VOYAGE_MODEL` |
+| **OCR Correction** | `claude-sonnet-4-6` (fastest, good vision) | `claude-opus-4-7`, `claude-haiku-4-5-20251001` | `OCR_CORRECTION_MODEL` |
+| **Chat** | `claude-opus-4-6` (best reasoning) | `claude-sonnet-4-6`, `claude-haiku-4-5-20251001` | `CHAT_MODEL` (Anthropic) or `CHAT_OLLAMA_MODEL` (Ollama) |
+
+To change any model, restart with a different env var:
+
+```bash
+# Use Voyage Large for embeddings (better quality, slower)
+docker compose -e VOYAGE_MODEL=voyage-large-2-1 up -d papyrus-api
+
+# Use Haiku for chat (cheaper)
+docker compose -e CHAT_MODEL=claude-haiku-4-5-20251001 up -d papyrus-api
+
+# Use Opus for OCR (higher quality, slower)
+docker compose -e OCR_CORRECTION_MODEL=claude-opus-4-7 up -d papyrus-api
+```
+
+**Note:** Changing the embedding model requires re-ingestion of all documents to rebuild embeddings.
+Changing chat or OCR models does not require re-ingestion.
 
 ## Web UI Pages
 

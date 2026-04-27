@@ -56,8 +56,8 @@ SearchController → VoyageAiEmbeddingService.embed(query)
 - Java 21
 - Maven 3.6+
 - Docker (for pgvector and integration tests)
-- [Voyage AI API key](https://www.voyageai.com/) — for embeddings (`voyage-3-lite`, 512 dimensions)
-- Anthropic API key — optional, for OCR correction only
+- [Voyage AI API key](https://www.voyageai.com/) — for embeddings (configurable model, default: `voyage-3-lite`, 512 dimensions)
+- Anthropic API key — optional, for OCR correction and chat
 
 ## Configuration
 
@@ -66,14 +66,51 @@ SearchController → VoyageAiEmbeddingService.embed(query)
 | `VOYAGE_API_KEY` | Yes | Voyage AI embeddings |
 | `DATABASE_URL` | Yes | PostgreSQL JDBC URL (default: `jdbc:postgresql://localhost:5432/papyrus`) |
 | `ANTHROPIC_API_KEY` | Only if using Anthropic chat or OCR correction | Anthropic API key |
+| **Embedding** | | |
+| `VOYAGE_MODEL` | No | Embedding model (default: `voyage-3-lite`); alternatives: `voyage-large-2-1`, `voyage-2` |
+| **OCR Correction** | | |
 | `OCR_CORRECTION_ENABLED` | No | Set `true` to enable LLM post-processing of Tesseract output |
-| `TESSDATA_PREFIX` | No | Tesseract data path (Alpine Docker: `/usr/share/tessdata`) |
+| `OCR_CORRECTION_MODEL` | No | OCR correction model (default: `claude-sonnet-4-6`) — only used when `OCR_CORRECTION_ENABLED=true` |
+| **Chat** | | |
 | `CHAT_PROVIDER` | No | Chat LLM provider: `anthropic` (default) or `ollama` |
-| `CHAT_MODEL` | No | Model for the selected provider (default: `claude-opus-4-6`) |
+| `CHAT_MODEL` | No | Chat model when using Anthropic (default: `claude-opus-4-6`) |
 | `CHAT_OLLAMA_BASE_URL` | Only if `CHAT_PROVIDER=ollama` | Ollama base URL (default: `http://localhost:11434`) |
 | `CHAT_OLLAMA_MODEL` | Only if `CHAT_PROVIDER=ollama` | Ollama model name (default: `llama3.2`) |
+| **Prompts** | | |
 | `CHAT_PROMPT_FILE` | No | Path to a custom chat system prompt file — overrides the classpath default |
 | `OCR_PROMPT_FILE` | No | Path to a custom OCR correction prompt file — overrides the classpath default |
+| **Other** | | |
+| `TESSDATA_PREFIX` | No | Tesseract data path (Alpine Docker: `/usr/share/tessdata`) |
+
+### Configurable Models
+
+All three AI model services are configurable and support multiple providers:
+
+**Embedding (Voyage AI)** — default `voyage-3-lite`
+- Use `voyage-large-2-1` for higher quality (slower, more expensive)
+- Changing the embedding model requires **re-ingestion** of all documents
+- Set via `VOYAGE_MODEL=voyage-large-2-1`
+
+**OCR Correction** — default `claude-sonnet-4-6`
+- Use `claude-opus-4-7` for higher quality or `claude-haiku-4-5-20251001` for lower cost
+- Does NOT require re-ingestion when changed
+- Set via `OCR_CORRECTION_MODEL=claude-opus-4-7`
+
+**Chat (Anthropic or Ollama)** — default `claude-opus-4-6`
+- Use `claude-sonnet-4-6` for speed or `claude-haiku-4-5-20251001` for cost
+- Does NOT require re-ingestion when changed
+- Set via `CHAT_MODEL=claude-sonnet-4-6` (Anthropic) or `CHAT_OLLAMA_MODEL=mistral` (Ollama)
+
+Example — change models at runtime:
+
+```bash
+# Use Voyage Large embeddings, Haiku for chat, Opus for OCR
+docker compose \
+  -e VOYAGE_MODEL=voyage-large-2-1 \
+  -e CHAT_MODEL=claude-haiku-4-5-20251001 \
+  -e OCR_CORRECTION_MODEL=claude-opus-4-7 \
+  up -d papyrus-api
+```
 
 ### Prompt files
 
@@ -227,7 +264,7 @@ Managed by Flyway (`V1__create_schema.sql`):
 - `document_chunks` — text chunks with `vector(512)` embeddings, HNSW index on cosine ops
 - `ingestion_jobs` — batch job tracking
 
-Embeddings are 512-dimensional (`voyage-3-lite`). Changing embedding providers requires a schema migration to update the vector column type.
+Embeddings are 512-dimensional for `voyage-3-lite` (default). Other Voyage models use the same dimension. Changing embedding providers (e.g. to Ollama) requires a schema migration to update the vector column type.
 
 ## Web UI
 

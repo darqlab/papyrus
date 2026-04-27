@@ -4,10 +4,43 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Papyrus — Ingest</title>
+  <script>
+    (function() {
+      const theme = localStorage.getItem('papyrus-theme') || 'dark';
+      if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
-    body { font-family: system-ui, sans-serif; background: #f8f9fa; color: #212529; display: flex; flex-direction: row; }
+
+    :root {
+      --bg: #f7f7f8;
+      --surface: #ffffff;
+      --border: #e5e7eb;
+      --text: #1a1a1a;
+      --text-muted: #6b7280;
+      --text-faint: #9ca3af;
+      --code-bg: #f3f4f6;
+      --table-head: #f9fafb;
+      --input-bg: #ffffff;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0f0f13;
+      --surface: #1c1c24;
+      --border: #2e2e3a;
+      --text: #e8e8f0;
+      --text-muted: #8888a8;
+      --text-faint: #55556a;
+      --code-bg: #1a1a24;
+      --table-head: #1a1a24;
+      --input-bg: #1c1c24;
+    }
+
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: row; }
 
     /* ── Sidebar ─────────────────────────────────────────────────── */
     #sidebar {
@@ -51,15 +84,15 @@
     /* ── Sub-navigation ──────────────────────────────────────────── */
     #subnav {
       display: flex; gap: 0;
-      border-bottom: 2px solid #e5e7eb;
-      background: #fff;
+      border-bottom: 2px solid var(--border);
+      background: var(--surface);
       padding: 0 2rem;
     }
     #subnav a {
       display: flex; align-items: center; gap: .5rem;
       padding: .85rem 1.25rem;
       font-size: .9rem; font-weight: 500;
-      color: #6b7280; text-decoration: none;
+      color: var(--text-muted); text-decoration: none;
       border-bottom: 2px solid transparent;
       margin-bottom: -2px;
       transition: color .15s, border-color .15s;
@@ -79,15 +112,16 @@
     #comparison-wrap.visible { display: block; }
 
     section {
-      background: #fff; border-radius: 8px; padding: 1.5rem;
+      background: var(--surface); border-radius: 8px; padding: 1.5rem;
       box-shadow: 0 1px 3px rgba(0,0,0,.08);
     }
-    h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #333; }
+    h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text); }
 
-    label { display: block; font-size: .85rem; margin-bottom: .4rem; color: #555; }
+    label { display: block; font-size: .85rem; margin-bottom: .4rem; color: var(--text-muted); }
     input[type=file], select {
-      width: 100%; padding: .5rem .75rem; border: 1px solid #ced4da;
+      width: 100%; padding: .5rem .75rem; border: 1px solid var(--border);
       border-radius: 6px; font-size: .9rem; outline: none; transition: border-color .15s;
+      background: var(--input-bg); color: var(--text);
     }
     select:focus { border-color: #4361ee; }
 
@@ -115,7 +149,7 @@
     .steps { display: flex; gap: 0; margin-bottom: 1.25rem; }
     .step {
       flex: 1; text-align: center; font-size: .8rem; padding: .4rem;
-      background: #f1f3f5; color: #9ca3af; border: 1px solid #dee2e6;
+      background: var(--table-head); color: var(--text-faint); border: 1px solid var(--border);
     }
     .step:first-child { border-radius: 6px 0 0 6px; }
     .step:last-child  { border-radius: 0 6px 6px 0; }
@@ -124,47 +158,48 @@
 
     /* Image preview */
     #image-preview { display: none; margin-top: .75rem; }
-    #preview-img   { max-height: 150px; max-width: 100%; border-radius: 6px; border: 1px solid #ced4da; display: block; }
+    #preview-img   { max-height: 150px; max-width: 100%; border-radius: 6px; border: 1px solid var(--border); display: block; }
 
     /* Comparison panel */
     .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem; }
     .compare-pane { display: flex; flex-direction: column; gap: .5rem; }
-    .compare-pane h3 { font-size: 1rem; font-weight: 600; color: #333; }
-    .compare-pane img { width: 100%; border-radius: 6px; border: 1px solid #ced4da; object-fit: contain; max-height: 85vh; background: #f1f3f5; }
+    .compare-pane h3 { font-size: 1rem; font-weight: 600; color: var(--text); }
+    .compare-pane img { width: 100%; border-radius: 6px; border: 1px solid var(--border); object-fit: contain; max-height: 85vh; background: var(--table-head); }
+    .compare-pane embed { width: 100%; border-radius: 6px; border: 1px solid var(--border); height: 85vh; background: var(--table-head); }
 
     /* Filename input */
     .filename-row { display: flex; align-items: center; gap: .6rem; margin-top: .5rem; }
-    .filename-row label { font-size: .8rem; color: #6b7280; margin-bottom: 0; white-space: nowrap; flex-shrink: 0; }
+    .filename-row label { font-size: .8rem; color: var(--text-muted); margin-bottom: 0; white-space: nowrap; flex-shrink: 0; }
     .filename-input {
       width: 100%; padding: .45rem .75rem;
-      border: 1px solid #ced4da; border-radius: 6px;
+      border: 1px solid var(--border); border-radius: 6px;
       font-size: .85rem; font-family: monospace;
       outline: none; transition: border-color .15s;
-      color: #1a1a1a; background: #fff;
+      color: var(--text); background: var(--input-bg);
     }
     .filename-input:focus { border-color: #4361ee; box-shadow: 0 0 0 3px rgba(67,97,238,.15); }
-    .filename-input:disabled { background: #f8f9fa; color: #9ca3af; }
+    .filename-input:disabled { background: var(--code-bg); color: var(--text-faint); }
     .ocr-text {
-      flex: 1; background: #f8f9fa; border: 1px solid #ced4da; border-radius: 6px;
+      flex: 1; background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px;
       padding: 1rem 1.25rem; font-size: 1rem; white-space: pre-wrap;
       word-break: break-word; overflow-y: auto; max-height: 85vh;
       line-height: 1.75; min-height: 300px; resize: vertical;
-      font-family: inherit; color: #1a1a1a; width: 100%;
+      font-family: inherit; color: var(--text); width: 100%;
       transition: border-color .15s, box-shadow .15s;
     }
-    .ocr-text:enabled { background: #fff; }
+    .ocr-text:enabled { background: var(--input-bg); }
     .ocr-text:enabled:focus {
       outline: none; border-color: #4361ee;
       box-shadow: 0 0 0 3px rgba(67,97,238,.15);
     }
-    .ocr-loading { color: #6b7280; font-style: italic; }
+    .ocr-loading { color: var(--text-muted); font-style: italic; }
 
     /* Progress bar */
     .progress-wrap { display: none; margin-top: .6rem; }
     .progress-wrap.visible { display: block; }
-    .progress-track { height: 6px; background: #e5e7eb; border-radius: 99px; overflow: hidden; margin-bottom: .35rem; }
+    .progress-track { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; margin-bottom: .35rem; }
     .progress-bar { height: 100%; background: #4361ee; border-radius: 99px; width: 0%; transition: width .4s ease; }
-    .progress-label { font-size: .78rem; color: #6b7280; }
+    .progress-label { font-size: .78rem; color: var(--text-muted); }
 
     /* Drag overlay */
     #drag-overlay {
@@ -205,6 +240,9 @@
     </a>
   </nav>
   <div id="sidebar-footer">
+    <button id="theme-toggle" style="background: none; border: none; color: #a0a0c0; font-size: 1.1rem; cursor: pointer; padding: 0.4rem; margin-right: auto;" title="Toggle dark mode">
+      <span id="theme-icon">☀️</span>
+    </button>
     <div class="health-dot" id="health-dot"></div>
     <span id="health-label">Connecting…</span>
   </div>
@@ -285,8 +323,9 @@
       </p>
       <div class="compare-grid">
         <div class="compare-pane">
-          <h3>Original Image</h3>
-          <img id="compare-img" alt="uploaded image">
+          <h3 id="compare-orig-label">Original</h3>
+          <img id="compare-img" alt="uploaded image" style="display:none">
+          <embed id="compare-embed" type="application/pdf" style="display:none">
         </div>
         <div class="compare-pane">
           <h3>Extracted Text <span style="font-size:.8rem;font-weight:400;color:#6b7280">— editable</span></h3>
@@ -310,6 +349,7 @@
 <script>
   const api = '';
   const IMAGE_TYPES   = new Set(['image/png','image/jpeg','image/tiff','image/bmp','image/gif']);
+  const PREVIEW_TYPES = new Set(['image/png','image/jpeg','image/tiff','image/bmp','image/gif','application/pdf']);
   const ACCEPTED_EXTS = new Set([
     'pdf','docx','txt','html','htm','md','csv','xlsx','pptx','epub',
     'png','jpg','jpeg','tiff','tif','bmp','gif'
@@ -317,8 +357,9 @@
   const MAX_FILE_BYTES = 100 * 1024 * 1024; // 100 MB — matches server multipart limit
 
   let currentFile     = null;
-  let currentImageUrl = null;
+  let currentFileUrl  = null;
   let currentIsImage  = false;
+  let currentIsPdf    = false;
   let pendingText     = null;
 
   // ── Drag and drop ─────────────────────────────────────────────────
@@ -352,7 +393,7 @@
   // ── File selected ─────────────────────────────────────────────────
   function onFileSelected(input) {
     if (!input.files.length) return;
-    currentFile    = input.files[0];
+    currentFile   = input.files[0];
     if (currentFile.size > MAX_FILE_BYTES) {
       setStatus(document.getElementById('upload-status'),
         `File too large (${(currentFile.size / 1024 / 1024).toFixed(1)} MB). Maximum size is 100 MB.`, 'err');
@@ -361,20 +402,23 @@
       return;
     }
     currentIsImage = IMAGE_TYPES.has(currentFile.type);
-    const preview = document.getElementById('image-preview');
-    const img     = document.getElementById('preview-img');
+    currentIsPdf   = currentFile.type === 'application/pdf';
+    const canPreview = currentIsImage || currentIsPdf;
+    const preview  = document.getElementById('image-preview');
+    const img      = document.getElementById('preview-img');
     if (currentIsImage) {
-      if (currentImageUrl) URL.revokeObjectURL(currentImageUrl);
-      currentImageUrl = URL.createObjectURL(currentFile);
-      img.src = currentImageUrl;
+      if (currentFileUrl) URL.revokeObjectURL(currentFileUrl);
+      currentFileUrl = URL.createObjectURL(currentFile);
+      img.src = currentFileUrl;
       preview.style.display = 'block';
-      document.getElementById('extract-btn').style.display = '';
-      document.getElementById('direct-btn').style.display  = 'none';
     } else {
-      preview.style.display = 'none'; img.src = '';
-      document.getElementById('extract-btn').style.display = 'none';
-      document.getElementById('direct-btn').style.display  = '';
+      if (currentFileUrl) URL.revokeObjectURL(currentFileUrl);
+      currentFileUrl = canPreview ? URL.createObjectURL(currentFile) : null;
+      preview.style.display = 'none';
+      img.src = '';
     }
+    document.getElementById('extract-btn').style.display = canPreview ? '' : 'none';
+    document.getElementById('direct-btn').style.display  = canPreview ? 'none' : '';
     document.getElementById('comparison-wrap').classList.remove('visible');
     document.getElementById('upload-status').textContent = '';
     setStep(1);
@@ -386,6 +430,8 @@
     const btn       = document.getElementById('extract-btn');
     const panel     = document.getElementById('comparison');
     const imgEl     = document.getElementById('compare-img');
+    const embedEl   = document.getElementById('compare-embed');
+    const labelEl   = document.getElementById('compare-orig-label');
     const textEl    = document.getElementById('compare-text');
     const acceptBtn = document.getElementById('accept-btn');
     if (!currentFile) { setStatus(status, 'Select a file first.', 'err'); return; }
@@ -398,7 +444,17 @@
       const data = await res.json();
       if (res.status === 413) { setStatus(status, 'File too large. Maximum upload size is 100 MB.', 'err'); btn.disabled = false; return; }
       if (!res.ok) { setStatus(status, `Error ${res.status}`, 'err'); btn.disabled = false; return; }
-      imgEl.src          = currentImageUrl;
+      if (currentIsPdf) {
+        labelEl.textContent    = 'Original PDF';
+        embedEl.src            = currentFileUrl;
+        embedEl.style.display  = '';
+        imgEl.style.display    = 'none';
+      } else {
+        labelEl.textContent   = 'Original Image';
+        imgEl.src             = currentFileUrl;
+        imgEl.style.display   = '';
+        embedEl.style.display = 'none';
+      }
       textEl.value       = data.text && data.text.trim() ? data.text : '';
       textEl.placeholder = data.text && data.text.trim() ? '' : '(No text detected)';
       textEl.className   = 'ocr-text';
@@ -461,6 +517,8 @@
     textEl.value = ''; textEl.disabled = true; textEl.className = 'ocr-text ocr-loading';
     const filenameEl = document.getElementById('archive-filename');
     filenameEl.value = ''; filenameEl.disabled = true;
+    document.getElementById('compare-img').style.display   = 'none';
+    document.getElementById('compare-embed').style.display = 'none';
     pendingText = null; setStep(1);
   }
 
@@ -537,6 +595,23 @@
     }
   }
 
+  // ── Theme toggle ─────────────────────────────────────────────────
+  function updateThemeIcon() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const icon = document.getElementById('theme-icon');
+    if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+  }
+
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      localStorage.setItem('papyrus-theme', isDark ? 'light' : 'dark');
+      updateThemeIcon();
+    });
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────
   function resetForm() {
     document.getElementById('file-input').value = '';
@@ -551,7 +626,10 @@
     document.getElementById('archive-filename').value     = '';
     document.getElementById('archive-filename').disabled  = true;
     document.getElementById('progress-wrap').classList.remove('visible');
-    currentFile = null; currentIsImage = false; pendingText = null;
+    document.getElementById('compare-img').style.display   = 'none';
+    document.getElementById('compare-embed').style.display = 'none';
+    if (currentFileUrl) { URL.revokeObjectURL(currentFileUrl); currentFileUrl = null; }
+    currentFile = null; currentIsImage = false; currentIsPdf = false; pendingText = null;
     setStep(1);
   }
 
@@ -567,6 +645,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     checkHealth();
     setInterval(checkHealth, 60_000);
+    updateThemeIcon();
   });
 </script>
 </body>

@@ -3,7 +3,7 @@ papyrus:
     provider: voyage
     voyage:
       api-key: ${VOYAGE_API_KEY:}
-      model: voyage-3-lite
+      model: ${VOYAGE_MODEL:voyage-3-lite}
     ollama:
       base-url: http://localhost:11434
       model: nomic-embed-text

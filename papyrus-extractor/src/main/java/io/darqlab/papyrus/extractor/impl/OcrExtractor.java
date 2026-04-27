@@ -7,6 +7,7 @@ import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
 import java.awt.image.BufferedImage;
@@ -27,6 +28,10 @@ public class OcrExtractor implements DocumentExtractor {
 
     private static final Set<String> SUPPORTED = Set.of("application/pdf");
     private static final float DPI = 300f;
+    // Scanners can embed images without normalising page size (1 px = 1 pt), producing pages
+    // like 36"×47". Rendering at 300 DPI would allocate ~600 MB per page and cause OOM.
+    // Cap so the longest side never exceeds this many pixels.
+    static final int MAX_RENDER_PIXELS = 4096;
 
     private Tesseract tesseract;
     private final String tessdata;
@@ -70,7 +75,7 @@ public class OcrExtractor implements DocumentExtractor {
             List<String> pageTexts = new ArrayList<>(pageCount);
 
             for (int i = 0; i < pageCount; i++) {
-                BufferedImage image = renderer.renderImageWithDPI(i, DPI);
+                BufferedImage image = renderer.renderImageWithDPI(i, safeDpi(document, i));
                 try {
                     pageTexts.add(tesseract().doOCR(image));
                 } catch (TesseractException e) {
@@ -84,6 +89,22 @@ public class OcrExtractor implements DocumentExtractor {
         } catch (IOException e) {
             throw new ExtractionException("OCR extraction failed for: " + filename, e);
         }
+    }
+
+    /** OCR a single already-open page; used by SmartPdfExtractor for per-page hybrid extraction. */
+    String extractPage(PDDocument document, PDFRenderer renderer, int pageIndex) {
+        try {
+            BufferedImage image = renderer.renderImageWithDPI(pageIndex, safeDpi(document, pageIndex));
+            return tesseract().doOCR(image);
+        } catch (TesseractException | IOException e) {
+            return "";
+        }
+    }
+
+    static float safeDpi(PDDocument document, int pageIndex) {
+        PDRectangle box = document.getPage(pageIndex).getMediaBox();
+        float longestInch = Math.max(box.getWidth(), box.getHeight()) / 72f;
+        return Math.min(DPI, MAX_RENDER_PIXELS / longestInch);
     }
 
 }
