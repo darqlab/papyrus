@@ -41,6 +41,17 @@ papyrus:
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
       model: ${OLLAMA_MODEL:nomic-embed-text}
+  ocr:
+    correction:
+      enabled: ${OCR_CORRECTION_ENABLED:false}
+      provider: ${OCR_PROVIDER:anthropic}
+      model: ${OCR_CORRECTION_MODEL:claude-sonnet-4-6}
+      anthropic:
+        api-key: ${ANTHROPIC_API_KEY:}
+      ollama:
+        base-url: ${OCR_OLLAMA_BASE_URL:http://localhost:11434}
+      evolink:
+        api-key: ${EVOLINK_API_KEY:}
   chat:
     provider: ${CHAT_PROVIDER:anthropic}
     anthropic:
@@ -49,6 +60,10 @@ papyrus:
     ollama:
       base-url: ${CHAT_OLLAMA_BASE_URL:http://localhost:11434}
       model: ${CHAT_OLLAMA_MODEL:llama3.2}
+    evolink:
+      api-key: ${EVOLINK_API_KEY:}
+      base-url: ${EVOLINK_BASE_URL:https://direct.evolink.ai}
+      model: ${CHAT_EVOLINK_MODEL:evolink/auto}
   archive:
     enabled: ${ARCHIVE_ENABLED:false}
     path: ${ARCHIVE_PATH:/data/papyrus/archive}

@@ -19,7 +19,7 @@ class ChunkingServiceTest {
                 new PapyrusProperties.ChunkingProperties(strategy, maxTokens, overlapTokens),
                 new PapyrusProperties.SearchProperties(5),
                 new PapyrusProperties.OcrProperties(
-                        new PapyrusProperties.CorrectionProperties(false, null, null)),
+                        new PapyrusProperties.CorrectionProperties(false, null, null, null, null, null)),
                 new PapyrusProperties.ArchiveProperties(false, null, null),
                 null
         );

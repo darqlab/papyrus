@@ -643,9 +643,9 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
             bubble.innerHTML = '';
             const banner = document.createElement('div');
             banner.className = 'credit-exhausted-banner';
-            banner.innerHTML = `<strong>&#9888; Anthropic credit balance exhausted</strong>`
-              + `<span>This Papyrus instance has run out of Anthropic API credits and cannot generate a response.</span>`
-              + `<span>Top up your balance at <a href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener">console.anthropic.com/settings/billing</a>, then restart the service.</span>`;
+            banner.innerHTML = `<strong>&#9888; AI provider credit balance exhausted</strong>`
+              + `<span>This Papyrus instance has run out of API credits and cannot generate a response.</span>`
+              + `<span>Top up your balance with your AI provider, then restart the service.</span>`;
             bubble.appendChild(banner);
             history.pop(); return;
           } else if (rawData) {

@@ -280,6 +280,64 @@ When the Anthropic API account has no remaining credits, the chat UI now shows a
 
 ---
 
+## Evolink AI Chat Provider ✅
+
+**Completed:** 2026-04-27
+
+Adds `CHAT_PROVIDER=evolink` as a third chat provider option, using the Evolink AI gateway (OpenAI-compatible SSE streaming).
+
+### What was built
+
+| Layer | Change |
+|-------|--------|
+| `papyrus-pipeline` config | `EvolinkChatProperties` record; `evolink` field added to `ChatProperties` |
+| `papyrus-pipeline` chat | New `EvolinkChatService` — OpenAI SSE streaming, 402/429 → `CreditExhaustedException` |
+| `papyrus-api` config | `evolink` block added to `application.yml` |
+| `papyrus-mcp` config | `evolink` block added to `application.yml` |
+| `papyrus-api` UI | Credit-exhausted banner message made provider-generic |
+| Tests | 7 unit tests for `EvolinkChatService.parseSseLine()` (all pass) |
+| Docs | `CLAUDE.md` Key Configuration table updated with 3 new env vars |
+
+### Key decisions
+
+- `OllamaChatService` (RestClient) used as template — same streaming approach, different SSE format and auth header
+- SSE parsing extracted to package-private `parseSseLine(String)` method for direct unit testing
+- 429 mapped to `CreditExhaustedException` alongside 402 — Evolink uses 429 for quota exhaustion, matching the Anthropic pattern
+- No new ADR required — ADR-005 explicitly anticipated OpenAI-compatible provider additions
+- Credit-exhausted banner text updated to be provider-generic (not Anthropic-specific)
+
+### Test results
+
+| Class | Tests | Result |
+|-------|-------|--------|
+| `EvolinkChatServiceTest` | 7 | ✅ All pass |
+
+---
+
+## Configurable OCR Correction Providers ✅
+
+**Completed:** 2026-04-27
+
+`OCR_PROVIDER` env var (independent of `CHAT_PROVIDER`) selects the LLM for Tesseract post-processing. All three providers use the same prompt and the same `correct(imageBytes, mimeType, rawText)` interface.
+
+### What was built
+
+| Layer | Change |
+|-------|--------|
+| `papyrus-pipeline` config | `CorrectionProperties` restructured — `provider`, `model` at top; nested `AnthropicCorrectionProperties`, `OllamaCorrectionProperties`, `EvolinkCorrectionProperties` |
+| `papyrus-pipeline` OCR | `OcrCorrectionService` converted to interface; `AnthropicOcrCorrectionService` (existing logic), `OllamaOcrCorrectionService`, `EvolinkOcrCorrectionService` (new) |
+| `papyrus-api` / `papyrus-mcp` config | `ocr.correction` block updated with nested provider config |
+| Docs | `CLAUDE.md` Key Configuration updated; `.env` updated with `OCR_PROVIDER`, `OCR_CORRECTION_MODEL` |
+
+### Key decisions
+
+- `OCR_PROVIDER` and `CHAT_PROVIDER` are fully independent — different providers can be used for chat and OCR
+- Each implementation handles a different vision API format (Anthropic multipart, OpenAI `image_url`, Ollama `images` array)
+- Ollama requires a vision model (e.g. `llava`) — operator must set `OCR_CORRECTION_MODEL` accordingly
+- `OcrCorrectionService` interface name preserved — `DocumentService` requires no code change
+
+---
+
 ## Pending
 
 | # | Scope | Status |
@@ -289,5 +347,6 @@ When the Anthropic API account has no remaining credits, the chat UI now shows a
 | #7 | Rename ingested image from content | Planned |
 | — | Credit exhausted indicator (chat UI) | ✅ Done — `feat/credit-exhausted-indicator` |
 | #10 | File size warning | ✅ Done — `fix/file-size-warning` |
+| — | Evolink AI chat provider | ✅ Done — `feat/evolink-chat-provider` |
 | — | Auth (API key / OAuth2) | Planned |
 | — | Production hardening (rate limiting, observability) | Planned |
