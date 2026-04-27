@@ -61,20 +61,23 @@ public class EvolinkChatService implements ChatService {
                 "stream", true
         );
 
-        InputStream responseStream;
-        try {
-            responseStream = restClient.post()
-                    .uri("/v1/chat/completions")
-                    .body(body)
-                    .retrieve()
-                    .body(InputStream.class);
-        } catch (RestClientResponseException e) {
-            int status = e.getStatusCode().value();
-            if (status == 402 || status == 429) {
-                throw new CreditExhaustedException("Evolink quota exhausted (HTTP " + status + ")", e);
-            }
-            throw e;
-        }
+        // Use exchange(fn, close=false) to get the raw InputStream without going through
+        // the converter chain — RestClient has no converter for text/event-stream → InputStream.
+        InputStream responseStream = restClient.post()
+                .uri("/v1/chat/completions")
+                .body(body)
+                .exchange((req, res) -> {
+                    int status = res.getStatusCode().value();
+                    if (status == 402 || status == 429) {
+                        throw new CreditExhaustedException("Evolink quota exhausted (HTTP " + status + ")");
+                    }
+                    if (!res.getStatusCode().is2xxSuccessful()) {
+                        throw new RestClientResponseException(
+                                "Evolink error " + status, res.getStatusCode(),
+                                res.getStatusText(), res.getHeaders(), null, null);
+                    }
+                    return res.getBody();
+                }, false);
 
         if (responseStream == null) return Stream.empty();
 
