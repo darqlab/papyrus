@@ -54,6 +54,12 @@ All docs live in `/home/dennis/devops/projects/papyrus/docs/`.
 | `Papyrus_FileSizeWarning_IA.md` | File size warning (#10) — Issue Analysis |
 | `Papyrus_FileSizeWarning_IP.md` | File size warning (#10) — Implementation Plan |
 | `Papyrus_FileSizeWarning_TM.md` | File size warning (#10) — Task Management |
+| `Papyrus_EvolinkChatProvider_IA.md` | Evolink AI chat provider — Issue Analysis |
+| `Papyrus_EvolinkChatProvider_IP.md` | Evolink AI chat provider — Implementation Plan |
+| `Papyrus_EvolinkChatProvider_TM.md` | Evolink AI chat provider — Task Management |
+| `Papyrus_OcrProviders_IA.md` | Configurable OCR correction providers — Issue Analysis |
+| `Papyrus_OcrProviders_IP.md` | Configurable OCR correction providers — Implementation Plan |
+| `Papyrus_OcrProviders_TM.md` | Configurable OCR correction providers — Task Management |
 
 ---
 
@@ -209,19 +215,24 @@ Transport: **Streamable HTTP** (`spring.ai.mcp.server.protocol: STREAMABLE`), en
 |---------|---------|
 | `VOYAGE_API_KEY` | Required — Voyage AI embeddings |
 | `VOYAGE_MODEL` | Embedding model (default: `voyage-3-lite`); alternatives: `voyage-large-2-1`, `voyage-2` |
-| `ANTHROPIC_API_KEY` | Required for Anthropic chat and OCR correction |
+| `ANTHROPIC_API_KEY` | Required when `CHAT_PROVIDER=anthropic` or `OCR_PROVIDER=anthropic` |
 | `DATABASE_URL` | PostgreSQL JDBC URL (default: `jdbc:postgresql://localhost:5432/papyrus`) |
-| `OCR_CORRECTION_ENABLED` | `true` to enable Claude LLM post-processing of Tesseract output |
-| `OCR_CORRECTION_MODEL` | OCR correction LLM model (default: `claude-sonnet-4-6`); only used when `OCR_CORRECTION_ENABLED=true` |
+| `OCR_CORRECTION_ENABLED` | `true` to enable LLM post-processing of Tesseract output |
+| `OCR_PROVIDER` | OCR correction provider: `anthropic` (default), `ollama`, or `evolink`. Independent of `CHAT_PROVIDER` |
+| `OCR_CORRECTION_MODEL` | Model for OCR correction (default: `claude-sonnet-4-6`; set to match chosen provider) |
+| `OCR_OLLAMA_BASE_URL` | Ollama base URL for OCR (default: `http://localhost:11434`; only when `OCR_PROVIDER=ollama`) |
 | `ARCHIVE_ENABLED` | `true` to save originals + extracted text to filesystem |
 | `ARCHIVE_PATH` | Archive root directory (default: `/data/papyrus/archive`) |
 | `TESSDATA_PREFIX` | Tesseract data path (Alpine Docker: `/usr/share/tessdata`) |
-| `CHAT_PROVIDER` | Chat LLM provider: `anthropic` (default) or `ollama` |
+| `CHAT_PROVIDER` | Chat LLM provider: `anthropic` (default), `ollama`, or `evolink` |
 | `CHAT_MODEL` | Model name for the selected provider (default: `claude-opus-4-6`) |
 | `CHAT_PROMPT_FILE` | Optional path to an external chat system prompt file (≥ 50 chars); restart required |
 | `OCR_PROMPT_FILE` | Optional path to an external OCR correction prompt file; restart required |
 | `CHAT_OLLAMA_BASE_URL` | Ollama base URL (default: `http://localhost:11434`; only used when `CHAT_PROVIDER=ollama`) |
 | `CHAT_OLLAMA_MODEL` | Ollama model name (default: `llama3.2`; only used when `CHAT_PROVIDER=ollama`) |
+| `EVOLINK_API_KEY` | Required when `CHAT_PROVIDER=evolink` or `OCR_PROVIDER=evolink` — Evolink AI bearer token (`sk-evo-...`) |
+| `EVOLINK_BASE_URL` | Evolink base URL (default: `https://direct.evolink.ai`; only used when `CHAT_PROVIDER=evolink`) |
+| `CHAT_EVOLINK_MODEL` | Evolink model name (default: `evolink/auto`; only used when `CHAT_PROVIDER=evolink`) |
 
 ## LLM & Embedding Model Selection
 

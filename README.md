@@ -5,7 +5,7 @@ Self-hosted document intelligence MCP server. Ingest, index, and semantically se
 ## Features
 
 - Ingest PDFs (digital and scanned), DOCX, XLSX, PPTX, EPUB, HTML, images, and plain text
-- OCR via Tesseract with optional Claude Sonnet post-processing to clean up output
+- OCR via Tesseract with optional LLM post-processing (Anthropic, Ollama, or Evolink)
 - Semantic search powered by Voyage AI embeddings and pgvector (cosine similarity)
 - REST API for document management and search
 - MCP server (Streamable HTTP transport) for direct integration with AI assistants — works in claude.ai, Claude mobile, and Claude Code
@@ -65,17 +65,22 @@ SearchController → VoyageAiEmbeddingService.embed(query)
 |---|---|---|
 | `VOYAGE_API_KEY` | Yes | Voyage AI embeddings |
 | `DATABASE_URL` | Yes | PostgreSQL JDBC URL (default: `jdbc:postgresql://localhost:5432/papyrus`) |
-| `ANTHROPIC_API_KEY` | Only if using Anthropic chat or OCR correction | Anthropic API key |
+| `ANTHROPIC_API_KEY` | Only if `CHAT_PROVIDER=anthropic` or `OCR_PROVIDER=anthropic` | Anthropic API key |
 | **Embedding** | | |
 | `VOYAGE_MODEL` | No | Embedding model (default: `voyage-3-lite`); alternatives: `voyage-large-2-1`, `voyage-2` |
 | **OCR Correction** | | |
 | `OCR_CORRECTION_ENABLED` | No | Set `true` to enable LLM post-processing of Tesseract output |
-| `OCR_CORRECTION_MODEL` | No | OCR correction model (default: `claude-sonnet-4-6`) — only used when `OCR_CORRECTION_ENABLED=true` |
+| `OCR_PROVIDER` | No | OCR correction provider: `anthropic` (default), `ollama`, or `evolink`. Independent of `CHAT_PROVIDER` |
+| `OCR_CORRECTION_MODEL` | No | Model for OCR correction (default: `claude-sonnet-4-6`; set to match chosen provider) |
+| `OCR_OLLAMA_BASE_URL` | Only if `OCR_PROVIDER=ollama` | Ollama base URL for OCR (default: `http://localhost:11434`) |
 | **Chat** | | |
-| `CHAT_PROVIDER` | No | Chat LLM provider: `anthropic` (default) or `ollama` |
-| `CHAT_MODEL` | No | Chat model when using Anthropic (default: `claude-opus-4-6`) |
+| `CHAT_PROVIDER` | No | Chat LLM provider: `anthropic` (default), `ollama`, or `evolink` |
+| `CHAT_MODEL` | No | Chat model for the selected provider (default: `claude-opus-4-6`) |
 | `CHAT_OLLAMA_BASE_URL` | Only if `CHAT_PROVIDER=ollama` | Ollama base URL (default: `http://localhost:11434`) |
 | `CHAT_OLLAMA_MODEL` | Only if `CHAT_PROVIDER=ollama` | Ollama model name (default: `llama3.2`) |
+| `EVOLINK_API_KEY` | Only if `CHAT_PROVIDER=evolink` or `OCR_PROVIDER=evolink` | Evolink AI bearer token (`sk-evo-...`) |
+| `EVOLINK_BASE_URL` | Only if `CHAT_PROVIDER=evolink` or `OCR_PROVIDER=evolink` | Evolink base URL (default: `https://direct.evolink.ai`) |
+| `CHAT_EVOLINK_MODEL` | Only if `CHAT_PROVIDER=evolink` | Evolink model name (default: `evolink/auto`) |
 | **Prompts** | | |
 | `CHAT_PROMPT_FILE` | No | Path to a custom chat system prompt file — overrides the classpath default |
 | `OCR_PROMPT_FILE` | No | Path to a custom OCR correction prompt file — overrides the classpath default |
@@ -96,10 +101,11 @@ All three AI model services are configurable and support multiple providers:
 - Does NOT require re-ingestion when changed
 - Set via `OCR_CORRECTION_MODEL=claude-opus-4-7`
 
-**Chat (Anthropic or Ollama)** — default `claude-opus-4-6`
-- Use `claude-sonnet-4-6` for speed or `claude-haiku-4-5-20251001` for cost
+**Chat (Anthropic, Ollama, or Evolink)** — default `claude-opus-4-6`
+- Use `claude-sonnet-4-6` for speed or `claude-haiku-4-5-20251001` for cost (Anthropic)
+- Use `CHAT_PROVIDER=ollama` with `CHAT_OLLAMA_MODEL=mistral` for fully offline deployments
+- Use `CHAT_PROVIDER=evolink` with `EVOLINK_API_KEY` and `CHAT_EVOLINK_MODEL=evolink/auto`
 - Does NOT require re-ingestion when changed
-- Set via `CHAT_MODEL=claude-sonnet-4-6` (Anthropic) or `CHAT_OLLAMA_MODEL=mistral` (Ollama)
 
 Example — change models at runtime:
 
@@ -196,13 +202,20 @@ Create a `.env` file in the project root (see `.env.example`):
 
 ```dotenv
 VOYAGE_API_KEY=your_voyage_key
-ANTHROPIC_API_KEY=your_anthropic_key
+ANTHROPIC_API_KEY=your_anthropic_key   # required when CHAT_PROVIDER=anthropic or OCR_PROVIDER=anthropic
 POSTGRES_PASSWORD=your_db_password
 POSTGRES_DB=papyrus
 POSTGRES_USER=papyrus
 OCR_CORRECTION_ENABLED=true
+OCR_PROVIDER=anthropic                 # anthropic | ollama | evolink
+CHAT_PROVIDER=anthropic                # anthropic | ollama | evolink
 API_PORT=8081
 MCP_PORT=8082
+
+# Evolink (only when CHAT_PROVIDER=evolink or OCR_PROVIDER=evolink)
+# EVOLINK_API_KEY=sk-evo-...
+# EVOLINK_BASE_URL=https://direct.evolink.ai
+# CHAT_EVOLINK_MODEL=evolink/auto
 ```
 
 ### Production / Staging
