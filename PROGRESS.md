@@ -338,6 +338,56 @@ Adds `CHAT_PROVIDER=evolink` as a third chat provider option, using the Evolink 
 
 ---
 
+## Per-Source Chunking Strategy ✅
+
+**Completed:** 2026-04-27
+
+Each document can now store its own chunking strategy, max-token limit, and overlap — overriding the global default. Three strategies now available: `PARAGRAPH` (existing), `SECTION` (new, regex header detection), `SEMANTIC` (new, embedding-based sentence grouping).
+
+### What was built
+
+| Layer | Change |
+|-------|--------|
+| DB | `V4__add_chunking_strategy.sql` — adds 3 nullable columns to `document_sources` |
+| `papyrus-pipeline` config | Added `SEMANTIC`, `SECTION` to `ChunkingStrategy`; added `SemanticChunkingProperties`, `SectionChunkingProperties` nested records to `PapyrusProperties` |
+| `papyrus-pipeline` chunking | New `ChunkingConfig` value object; new `SentenceSplitter` utility; `ChunkingService` extended with `chunkBySemantic()`, `chunkBySection()`, and `chunk(ExtractedText, ChunkingConfig)` overload |
+| `papyrus-core` embedding | `EmbeddingService.embedBatch()` default method (loop fallback); `VoyageAiEmbeddingService` overrides with native batch endpoint |
+| `papyrus-pipeline` entity | `DocumentSourceEntity` gains 3 new JPA fields |
+| `papyrus-core` domain | `Source` record extended with `chunkingStrategy`, `chunkingMaxTokens`, `chunkingOverlapTokens` |
+| `papyrus-pipeline` store | `VectorStoreService.toSource()` maps new fields |
+| `papyrus-api` service | `DocumentService.ingest()` persists per-source config; `reingest()` propagates stored config automatically |
+| `papyrus-api` controller | 3 new optional `@RequestParam` on `upload()`; `SourceResponse` extended |
+| `papyrus-api` UI | Collapsible "Chunking options" section on `ingest.html`; strategy badge on `manage.html` |
+| Config | `application.yml` (api + mcp) aligned to env vars; 7 new chunking env vars |
+| Docs | `CLAUDE.md` Key Configuration updated with all new env vars |
+
+### Key decisions
+
+- Nullable per-source columns (null = use global default) ensures full backward compatibility
+- `reingest()` reads stored config and propagates it to the new entity — no manual re-selection needed
+- `embedBatch()` default loops over `embed()` so all non-Voyage providers still work without change
+- SECTION strategy: regex header → merge small sections → `fixedSplit()` fallback; zero overlap recommended
+- SEMANTIC strategy: sentence split → Voyage batch embed → cosine similarity breakpoints → `fixedSplit()` fallback
+
+### Recommended per-source settings for known documents
+
+| Document | Strategy | maxTokens | overlapTokens |
+|----------|----------|-----------|---------------|
+| SPUM committee minutes (short items) | PARAGRAPH | 512 | 64 |
+| SPUM committee minutes (long preamble/Whereas) | PARAGRAPH | 900 | 100 |
+| WMC Employee Handbook (two-column) | SEMANTIC | 512 | 0 |
+| SSD Employee Handbook 2025 (numbered sections) | SECTION | 512 | 0 |
+
+### Test results
+
+| Class | Tests | Result |
+|-------|-------|--------|
+| `ChunkingServiceTest` | 8 | ✅ All pass |
+| `EvolinkChatServiceTest` | 7 | ✅ All pass |
+| `McpToolsTest` | 5 | ✅ All pass |
+
+---
+
 ## Pending
 
 | # | Scope | Status |
@@ -348,5 +398,6 @@ Adds `CHAT_PROVIDER=evolink` as a third chat provider option, using the Evolink 
 | — | Credit exhausted indicator (chat UI) | ✅ Done — `feat/credit-exhausted-indicator` |
 | #10 | File size warning | ✅ Done — `fix/file-size-warning` |
 | — | Evolink AI chat provider | ✅ Done — `feat/evolink-chat-provider` |
+| — | Per-source chunking strategy | ✅ Done — `feat/per-source-chunking-strategy` |
 | — | Auth (API key / OAuth2) | Planned |
 | — | Production hardening (rate limiting, observability) | Planned |

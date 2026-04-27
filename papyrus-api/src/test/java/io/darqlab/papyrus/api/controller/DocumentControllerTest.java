@@ -98,7 +98,7 @@ class DocumentControllerTest {
     void listDocuments_returnsSources() throws Exception {
         UUID id = UUID.randomUUID();
         Source source = new Source(id, "doc.pdf", null, null, "application/pdf",
-                IngestionStatus.DONE, Instant.now());
+                IngestionStatus.DONE, Instant.now(), null, null, null);
         when(vectorStoreService.listSources(anyInt(), eq(0))).thenReturn(List.of(source));
 
         mvc.perform(get("/api/documents"))
@@ -123,7 +123,7 @@ class DocumentControllerTest {
     void getDocument_found_returns200() throws Exception {
         UUID id = UUID.randomUUID();
         Source source = new Source(id, "doc.pdf", null, null, "application/pdf",
-                IngestionStatus.DONE, Instant.now());
+                IngestionStatus.DONE, Instant.now(), null, null, null);
         when(vectorStoreService.findById(id)).thenReturn(source);
 
         mvc.perform(get("/api/documents/" + id))

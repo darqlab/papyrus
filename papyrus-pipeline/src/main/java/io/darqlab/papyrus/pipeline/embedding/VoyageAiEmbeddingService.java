@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -45,6 +46,29 @@ public class VoyageAiEmbeddingService implements EmbeddingService {
         List<Map<String, Object>> data = (List<Map<String, Object>>) response.get("data");
         List<Double> raw = (List<Double>) data.get(0).get("embedding");
         return raw.stream().map(Double::floatValue).toList();
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public List<List<Float>> embedBatch(List<String> texts) {
+        if (texts.isEmpty()) return List.of();
+
+        Map<String, Object> request = Map.of(
+                "input", texts,
+                "model", model
+        );
+
+        Map<String, Object> response = restClient.post()
+                .body(request)
+                .retrieve()
+                .body(Map.class);
+
+        List<Map<String, Object>> data = (List<Map<String, Object>>) response.get("data");
+        return data.stream()
+                .sorted(Comparator.comparingInt(d -> ((Number) d.get("index")).intValue()))
+                .map(item -> (List<Double>) item.get("embedding"))
+                .map(raw -> raw.stream().map(Double::floatValue).toList())
+                .toList();
     }
 
     @Override

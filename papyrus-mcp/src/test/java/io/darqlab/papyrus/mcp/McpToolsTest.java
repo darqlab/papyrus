@@ -71,14 +71,16 @@ class McpToolsTest {
                 new PapyrusProperties.EmbeddingProperties("voyage",
                         new PapyrusProperties.VoyageProperties("key", "voyage-3-lite"),
                         new PapyrusProperties.OllamaProperties("http://localhost:11434", "nomic-embed-text")),
-                new PapyrusProperties.ChunkingProperties(ChunkingStrategy.PARAGRAPH, 512, 64),
+                new PapyrusProperties.ChunkingProperties(ChunkingStrategy.PARAGRAPH, 512, 64,
+                        new PapyrusProperties.SemanticChunkingProperties(0.75f, 3),
+                        new PapyrusProperties.SectionChunkingProperties("^\\d{3}(\\.\\d{2,3})+\\s+\\S", 50)),
                 new PapyrusProperties.SearchProperties(5),
                 new PapyrusProperties.OcrProperties(
                         new PapyrusProperties.CorrectionProperties(false, null, null, null, null, null)),
                 new PapyrusProperties.ArchiveProperties(false, null, null),
                 null);
 
-        ChunkingService chunkingService = new ChunkingService(props);
+        ChunkingService chunkingService = new ChunkingService(props, mock(EmbeddingService.class));
         FormatRouter formatRouter = FormatRouter.withDefaultExtractors();
 
         EmbeddingService embeddingService = mock(EmbeddingService.class);
@@ -113,14 +115,16 @@ class McpToolsTest {
                 new PapyrusProperties.EmbeddingProperties("voyage",
                         new PapyrusProperties.VoyageProperties("key", "voyage-3-lite"),
                         new PapyrusProperties.OllamaProperties("http://localhost:11434", "nomic-embed-text")),
-                new PapyrusProperties.ChunkingProperties(ChunkingStrategy.PARAGRAPH, 512, 64),
+                new PapyrusProperties.ChunkingProperties(ChunkingStrategy.PARAGRAPH, 512, 64,
+                        new PapyrusProperties.SemanticChunkingProperties(0.75f, 3),
+                        new PapyrusProperties.SectionChunkingProperties("^\\d{3}(\\.\\d{2,3})+\\s+\\S", 50)),
                 new PapyrusProperties.SearchProperties(5),
                 new PapyrusProperties.OcrProperties(
                         new PapyrusProperties.CorrectionProperties(false, null, null, null, null, null)),
                 new PapyrusProperties.ArchiveProperties(false, null, null),
                 null);
 
-        ChunkingService chunkingService = new ChunkingService(props);
+        ChunkingService chunkingService = new ChunkingService(props, mock(EmbeddingService.class));
         FormatRouter formatRouter = FormatRouter.withDefaultExtractors();
         VectorStoreService vectorStore = mock(VectorStoreService.class);
 

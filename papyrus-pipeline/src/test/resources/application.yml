@@ -21,6 +21,12 @@ papyrus:
     strategy: paragraph
     max-tokens: 512
     overlap-tokens: 64
+    semantic:
+      threshold: 0.75
+      min-sentences: 3
+    section:
+      pattern: "^\\d{3}(\\.\\d{2,3})+\\s+\\S"
+      min-tokens: 50
   search:
     default-top-k: 5
 

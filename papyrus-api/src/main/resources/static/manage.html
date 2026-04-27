@@ -482,7 +482,10 @@
         <td class="col-archive">${archiveCell}</td>
         <td class="col-type"><span class="file-type">${esc(fileTypeLabel(d.contentType, d.filename))}</span></td>
         <td class="col-date">${formatDate(d.createdAt)}</td>
-        <td class="col-status"><span class="badge ${statusBadge}">${esc(d.status)}</span></td>
+        <td class="col-status">
+          <span class="badge ${statusBadge}">${esc(d.status)}</span>
+          ${d.chunkingStrategy ? `<div style="margin-top:.3rem;font-size:.72rem;color:#6366f1;font-weight:500" title="Stored chunking config — re-ingest will use this automatically">${esc(d.chunkingStrategy)}${d.chunkingMaxTokens ? ' · ' + d.chunkingMaxTokens + 't' : ''}</div>` : ''}
+        </td>
         <td class="col-action" style="text-align:right">
           ${canReingest
             ? `<button class="btn btn-ghost" style="font-size:.8rem;padding:.3rem .7rem" onclick="reingestOne('${d.id}', '${esc(d.filename)}')">Re-ingest</button>`
