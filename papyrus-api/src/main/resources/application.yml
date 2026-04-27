@@ -3,15 +3,21 @@ papyrus:
     provider: voyage
     voyage:
       api-key: ${VOYAGE_API_KEY:}
-      model: voyage-3-lite
+      model: ${VOYAGE_MODEL:voyage-3-lite}
     ollama:
       base-url: http://localhost:11434
       model: nomic-embed-text
   ocr:
     correction:
       enabled: ${OCR_CORRECTION_ENABLED:false}
-      api-key: ${ANTHROPIC_API_KEY:}
+      provider: ${OCR_PROVIDER:anthropic}
       model: ${OCR_CORRECTION_MODEL:claude-sonnet-4-6}
+      anthropic:
+        api-key: ${ANTHROPIC_API_KEY:}
+      ollama:
+        base-url: ${OCR_OLLAMA_BASE_URL:http://localhost:11434}
+      evolink:
+        api-key: ${EVOLINK_API_KEY:}
 
   chat:
     provider: ${CHAT_PROVIDER:anthropic}
@@ -21,6 +27,10 @@ papyrus:
     ollama:
       base-url: ${CHAT_OLLAMA_BASE_URL:http://localhost:11434}
       model: ${CHAT_OLLAMA_MODEL:llama3.2}
+    evolink:
+      api-key: ${EVOLINK_API_KEY:}
+      base-url: ${EVOLINK_BASE_URL:https://direct.evolink.ai}
+      model: ${CHAT_EVOLINK_MODEL:evolink/auto}
 
   archive:
     enabled: ${ARCHIVE_ENABLED:false}

@@ -74,7 +74,7 @@ class McpToolsTest {
                 new PapyrusProperties.ChunkingProperties(ChunkingStrategy.PARAGRAPH, 512, 64),
                 new PapyrusProperties.SearchProperties(5),
                 new PapyrusProperties.OcrProperties(
-                        new PapyrusProperties.CorrectionProperties(false, null, null)),
+                        new PapyrusProperties.CorrectionProperties(false, null, null, null, null, null)),
                 new PapyrusProperties.ArchiveProperties(false, null, null),
                 null);
 
@@ -116,7 +116,7 @@ class McpToolsTest {
                 new PapyrusProperties.ChunkingProperties(ChunkingStrategy.PARAGRAPH, 512, 64),
                 new PapyrusProperties.SearchProperties(5),
                 new PapyrusProperties.OcrProperties(
-                        new PapyrusProperties.CorrectionProperties(false, null, null)),
+                        new PapyrusProperties.CorrectionProperties(false, null, null, null, null, null)),
                 new PapyrusProperties.ArchiveProperties(false, null, null),
                 null);
 
