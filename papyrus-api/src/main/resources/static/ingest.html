@@ -302,6 +302,30 @@
           <button id="extract-btn" onclick="extractPreview()" style="display:none">Extract &amp; Verify</button>
           <button id="direct-btn" onclick="uploadDirect()">Upload</button>
         </div>
+        <details id="chunking-options" style="margin-top:.75rem;border:1px solid #e5e7eb;border-radius:6px;padding:.6rem .9rem">
+          <summary style="cursor:pointer;font-weight:500;font-size:.9rem;color:#374151">Chunking options</summary>
+          <div style="margin-top:.75rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem">
+            <div>
+              <label for="chunking-strategy" style="font-size:.8rem;color:#6b7280;display:block;margin-bottom:.25rem">Strategy</label>
+              <select id="chunking-strategy" style="width:100%;font-size:.85rem" onchange="updateStrategyHint()">
+                <option value="">Default (global config)</option>
+                <option value="PARAGRAPH">PARAGRAPH — minutes, agenda &amp; resolution docs</option>
+                <option value="SECTION">SECTION — single-column handbooks with numbered sections (100.05)</option>
+                <option value="SEMANTIC">SEMANTIC — two-column or densely formatted handbooks/reports</option>
+                <option value="FIXED">FIXED — unstructured or plain-text dumps</option>
+              </select>
+            </div>
+            <div>
+              <label for="chunking-max-tokens" style="font-size:.8rem;color:#6b7280;display:block;margin-bottom:.25rem">Max tokens per chunk</label>
+              <input type="number" id="chunking-max-tokens" placeholder="default: 512" min="64" max="4096" style="width:100%;font-size:.85rem">
+            </div>
+            <div>
+              <label for="chunking-overlap-tokens" style="font-size:.8rem;color:#6b7280;display:block;margin-bottom:.25rem">Overlap tokens</label>
+              <input type="number" id="chunking-overlap-tokens" placeholder="default: 64" min="0" max="512" style="width:100%;font-size:.85rem">
+            </div>
+          </div>
+          <p id="strategy-hint" style="margin:.6rem 0 0;font-size:.8rem;color:#6b7280"></p>
+        </details>
         <div id="upload-status" class="status"></div>
         <div id="progress-wrap" class="progress-wrap">
           <div class="progress-track"><div id="progress-bar" class="progress-bar"></div></div>
@@ -490,6 +514,7 @@
     if (filenameEl && filenameEl.value.trim()) {
       form.append('archiveFilename', filenameEl.value.trim());
     }
+    appendChunkingFields(form);
     try {
       const res  = await fetch(`${api}/api/documents`, { method: 'POST', body: form });
       const data = await res.json();
@@ -522,6 +547,29 @@
     pendingText = null; setStep(1);
   }
 
+  // ── Chunking options ─────────────────────────────────────────────
+  const STRATEGY_HINTS = {
+    PARAGRAPH: 'Best for: committee minutes, agenda-structured documents. Raise max tokens to 800–1024 for long preamble/Whereas items.',
+    SECTION:   'Best for: single-column hierarchical handbooks with numbered section codes (e.g. 100.05, 300.55 style). Zero overlap recommended.',
+    SEMANTIC:  'Best for: two-column or densely formatted documents (e.g. WMC-style handbooks) where paragraph breaks are unreliable after extraction.',
+    FIXED:     'Best for: unstructured or poorly formatted text with no meaningful paragraph or section boundaries.'
+  };
+
+  function updateStrategyHint() {
+    const val  = document.getElementById('chunking-strategy').value;
+    const hint = document.getElementById('strategy-hint');
+    hint.textContent = STRATEGY_HINTS[val] || '';
+  }
+
+  function appendChunkingFields(form) {
+    const strategy = document.getElementById('chunking-strategy').value;
+    const maxTok   = document.getElementById('chunking-max-tokens').value;
+    const overlap  = document.getElementById('chunking-overlap-tokens').value;
+    if (strategy) form.append('chunkingStrategy', strategy);
+    if (maxTok)   form.append('chunkingMaxTokens', maxTok);
+    if (overlap)  form.append('chunkingOverlapTokens', overlap);
+  }
+
   // ── Direct upload ─────────────────────────────────────────────────
   async function uploadDirect() {
     const status = document.getElementById('upload-status');
@@ -530,6 +578,7 @@
     if (!currentFile) { setStatus(status, 'Select a file first.', 'err'); return; }
     const form = new FormData();
     form.append('file', currentFile); form.append('language', lang);
+    appendChunkingFields(form);
     btn.disabled = true; setStatus(status, 'Uploading…', '');
     try {
       const res  = await fetch(`${api}/api/documents`, { method: 'POST', body: form });
