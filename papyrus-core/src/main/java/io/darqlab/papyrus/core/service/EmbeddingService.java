@@ -4,14 +4,15 @@ import java.util.List;
 
 public interface EmbeddingService {
 
-    /**
-     * Embed a single text string into a float vector.
-     */
     List<Float> embed(String text);
 
     /**
-     * The number of dimensions this provider's vectors have.
-     * Voyage AI voyage-3-lite = 512; Ollama nomic-embed-text = 768.
+     * Embed multiple texts in one call. Default implementation calls embed() in a loop;
+     * providers that support native batching (Voyage AI) should override this.
      */
+    default List<List<Float>> embedBatch(List<String> texts) {
+        return texts.stream().map(this::embed).toList();
+    }
+
     int getDimensions();
 }

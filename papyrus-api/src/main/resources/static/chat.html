@@ -4,15 +4,47 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Papyrus — Chat</title>
+  <script>
+    (function() {
+      const theme = localStorage.getItem('papyrus-theme') || 'dark';
+      if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --bg: #f7f7f8;
+      --surface: #ffffff;
+      --border: #e5e7eb;
+      --text: #1a1a1a;
+      --text-muted: #6b7280;
+      --text-faint: #9ca3af;
+      --code-bg: #f3f4f6;
+      --table-head: #f9fafb;
+      --input-bg: #ffffff;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0f0f13;
+      --surface: #1c1c24;
+      --border: #2e2e3a;
+      --text: #e8e8f0;
+      --text-muted: #8888a8;
+      --text-faint: #55556a;
+      --code-bg: #1a1a24;
+      --table-head: #1a1a24;
+      --input-bg: #1c1c24;
+    }
+
     html, body { height: 100%; }
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #f7f7f8;
-      color: #1a1a1a;
+      background: var(--bg);
+      color: var(--text);
       display: flex;
       flex-direction: row;
     }
@@ -134,14 +166,27 @@
       font-size: .95rem;
       word-break: break-word;
     }
+    :root {
+      --user-bubble-bg: #ede9fe;
+      --user-bubble-text: #1e1b4b;
+      --assistant-bubble-bg: #ffffff;
+      --assistant-bubble-text: #111827;
+    }
+    [data-theme="dark"] {
+      --user-bubble-bg: #4c1d95;
+      --user-bubble-text: #f3e8ff;
+      --assistant-bubble-bg: #2a2a3a;
+      --assistant-bubble-text: #e8e8f0;
+    }
+
     .msg.user .bubble {
-      background: #ede9fe;
-      color: #1e1b4b;
+      background: var(--user-bubble-bg);
+      color: var(--user-bubble-text);
       border-radius: 18px 4px 18px 18px;
     }
     .msg.assistant .bubble {
-      background: #fff;
-      color: #111827;
+      background: var(--assistant-bubble-bg);
+      color: var(--assistant-bubble-text);
       border-radius: 4px 18px 18px 18px;
       box-shadow: 0 1px 3px rgba(0,0,0,.08);
     }
@@ -154,9 +199,9 @@
       align-items: center;
       gap: .25rem;
       font-size: .72rem;
-      color: #9ca3af;
-      background: #f3f4f6;
-      border: 1px solid #e5e7eb;
+      color: var(--text-faint);
+      background: var(--code-bg);
+      border: 1px solid var(--border);
       border-radius: 5px;
       padding: .2rem .5rem;
       cursor: pointer;
@@ -164,12 +209,12 @@
     }
     .copy-btn svg { width: 11px; height: 11px; }
     .msg.assistant .bubble:hover .copy-btn { display: inline-flex; }
-    .copy-btn:hover { background: #e5e7eb; color: #374151; }
+    .copy-btn:hover { background: var(--border); color: #374151; }
 
     /* ── Timestamp ───────────────────────────────────────────────── */
     .msg-time {
       font-size: .72rem;
-      color: #9ca3af;
+      color: var(--text-faint);
       padding: 0 .4rem .2rem;
     }
 
@@ -180,20 +225,20 @@
     .bubble ul,.bubble ol { padding-left: 1.4em; margin-bottom: .6em; }
     .bubble li { margin-bottom: .25em; }
     .bubble pre {
-      background: #f3f4f6; border-radius: 8px; padding: .8rem 1rem;
+      background: var(--code-bg); border-radius: 8px; padding: .8rem 1rem;
       overflow-x: auto; font-size: .85rem; margin: .6em 0;
     }
     .bubble code { font-family: 'SFMono-Regular', Consolas, monospace; font-size: .88em; }
-    .bubble p > code { background: #f3f4f6; padding: .1em .4em; border-radius: 4px; }
+    .bubble p > code { background: var(--code-bg); padding: .1em .4em; border-radius: 4px; }
     .bubble blockquote {
-      border-left: 3px solid #d1d5db; padding-left: .8rem;
-      color: #6b7280; margin: .5em 0;
+      border-left: 3px solid var(--border); padding-left: .8rem;
+      color: var(--text-muted); margin: .5em 0;
     }
     .bubble strong { font-weight: 600; }
     .bubble a { color: #7c3aed; text-decoration: underline; }
     .bubble table { border-collapse: collapse; width: 100%; margin: .5em 0; font-size: .9em; }
-    .bubble th,.bubble td { border: 1px solid #e5e7eb; padding: .4em .7em; }
-    .bubble th { background: #f9fafb; font-weight: 600; }
+    .bubble th,.bubble td { border: 1px solid var(--border); padding: .4em .7em; }
+    .bubble th { background: var(--table-head); font-weight: 600; }
 
     /* Thinking indicator */
     .thinking { display: flex; align-items: center; gap: 4px; padding: .6rem .8rem; }
@@ -210,8 +255,8 @@
 
     /* ── Input bar ───────────────────────────────────────────────── */
     #input-wrap {
-      background: #fff;
-      border-top: 1px solid #e5e7eb;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
       padding: 1rem 1rem .75rem;
       flex-shrink: 0;
     }
@@ -225,7 +270,7 @@
     #msg-input {
       flex: 1;
       resize: none;
-      border: 1.5px solid #d1d5db;
+      border: 1.5px solid var(--border);
       border-radius: 12px;
       padding: .7rem 1rem;
       font-family: inherit;
@@ -234,6 +279,8 @@
       max-height: 200px;
       outline: none;
       overflow-y: auto;
+      background: var(--input-bg);
+      color: var(--text);
       transition: border-color .15s, box-shadow .15s;
     }
     #msg-input:focus {
@@ -263,22 +310,36 @@
       justify-content: space-between;
       align-items: center;
     }
-    .hint { font-size: .78rem; color: #9ca3af; }
-    #char-count { font-size: .75rem; color: #9ca3af; transition: color .15s; }
+    .hint { font-size: .78rem; color: var(--text-faint); }
+    #char-count { font-size: .75rem; color: var(--text-faint); transition: color .15s; }
     #char-count.warn { color: #f59e0b; }
+
+    /* ── Token usage badge ───────────────────────────────────────── */
+    .token-usage {
+      margin-top: .4rem;
+      font-size: .73rem;
+      color: var(--text-faint);
+      display: flex;
+      gap: .5rem;
+    }
+    .token-usage span {
+      background: var(--code-bg);
+      border-radius: 4px;
+      padding: .15rem .45rem;
+    }
 
     /* ── Sources citations panel ─────────────────────────────────── */
     .sources-panel {
       margin-top: .75rem;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--border);
       border-radius: 8px;
       font-size: .8rem;
-      color: #6b7280;
+      color: var(--text-muted);
       overflow: hidden;
     }
     .sources-panel summary {
       padding: .45rem .75rem;
-      background: #f9fafb;
+      background: var(--table-head);
       cursor: pointer;
       font-weight: 600;
       user-select: none;
@@ -302,9 +363,9 @@
     }
     .source-item { line-height: 1.5; }
     .source-item strong { color: #374151; }
-    .source-link { color: #374151; font-weight: 600; text-decoration: none; border-bottom: 1px solid #d1d5db; transition: color .15s, border-color .15s; }
+    .source-link { color: #374151; font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--border); transition: color .15s, border-color .15s; }
     .source-link:hover { color: #4361ee; border-bottom-color: #4361ee; }
-    .source-excerpt { color: #9ca3af; display: block; }
+    .source-excerpt { color: var(--text-faint); display: block; }
 
     /* ── Inline PDF button inside bubble ────────────────────────── */
     .bubble-pdf-btn {
@@ -313,16 +374,54 @@
       gap: .35rem;
       margin-top: .85rem;
       font-size: .78rem;
-      color: #6b7280;
-      background: #f3f4f6;
-      border: 1px solid #e5e7eb;
+      color: var(--text-muted);
+      background: var(--code-bg);
+      border: 1px solid var(--border);
       border-radius: 6px;
       padding: .3rem .7rem;
       cursor: pointer;
       transition: background .15s, color .15s, border-color .15s;
     }
-    .bubble-pdf-btn:hover { background: #e5e7eb; color: #374151; border-color: #d1d5db; }
+    .bubble-pdf-btn:hover { background: var(--border); color: #374151; }
     .bubble-pdf-btn svg { width: 12px; height: 12px; }
+
+    /* ── Credit exhausted banner ─────────────────────────────────── */
+    .credit-exhausted-banner {
+      display: flex;
+      flex-direction: column;
+      gap: .45rem;
+      background: #fffbeb;
+      border: 1.5px solid #f59e0b;
+      border-radius: 10px;
+      padding: .85rem 1.1rem;
+      font-size: .9rem;
+      color: #92400e;
+      max-width: 88%;
+    }
+    .credit-exhausted-banner strong { color: #78350f; font-size: .95rem; }
+    .credit-exhausted-banner a { color: #b45309; font-weight: 600; text-decoration: underline; }
+    .credit-exhausted-banner a:hover { color: #92400e; }
+
+    .error-banner {
+      background: #fee2e2;
+      border-left: 4px solid #dc2626;
+      border-radius: 6px;
+      padding: 1rem;
+      margin: .5rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+    }
+    [data-theme="dark"] .error-banner {
+      background: #7f1d1d;
+      border-left-color: #ef4444;
+    }
+    .error-banner strong { color: #7f1d1d; font-size: .95rem; }
+    [data-theme="dark"] .error-banner strong { color: #fecaca; }
+    .error-banner a { color: #b91c1c; font-weight: 600; text-decoration: underline; }
+    [data-theme="dark"] .error-banner a { color: #fca5a5; }
+    .error-banner a:hover { color: #991b1b; }
+    [data-theme="dark"] .error-banner a:hover { color: #f87171; }
 
     @media (max-width: 600px) {
       #sidebar { width: 60px; }
@@ -360,6 +459,9 @@
   </button>
 
   <div id="sidebar-footer">
+    <button id="theme-toggle" style="background: none; border: none; color: #a0a0c0; font-size: 1.1rem; cursor: pointer; padding: 0.4rem; margin-right: auto;" title="Toggle dark mode">
+      <span id="theme-icon">☀️</span>
+    </button>
     <div class="health-dot" id="health-dot"></div>
     <span id="health-label">Connecting…</span>
   </div>
@@ -564,6 +666,7 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
     const { bubble, msgEl } = appendAssistant();
     let accumulated = '';
     let sourcesData = [];
+    let usageData   = null;
 
     try {
       const res = await fetch('/api/chat', {
@@ -573,7 +676,23 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
       });
 
       if (!res.ok) {
-        bubble.innerHTML = `<span style="color:#dc2626">Error ${res.status}</span>`;
+        let errorMsg = `Error ${res.status}`;
+        try {
+          const errorData = await res.json();
+          if (errorData.error?.message) {
+            errorMsg = errorData.error.message;
+          } else if (typeof errorData === 'string') {
+            errorMsg = errorData;
+          }
+        } catch (_) {}
+
+        const banner = document.createElement('div');
+        banner.className = 'error-banner';
+        banner.innerHTML = `<strong>&#9888; ${esc(errorMsg)}</strong>`;
+        if (errorMsg.includes('API usage') || errorMsg.includes('limit')) {
+          banner.innerHTML += `<span>Check your API account at <a href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener">console.anthropic.com</a></span>`;
+        }
+        bubble.appendChild(banner);
         history.pop(); return;
       }
 
@@ -602,8 +721,19 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
             done_flag = true;
           } else if (evtName === 'sources') {
             try { sourcesData = JSON.parse(rawData); } catch (_) {}
+          } else if (evtName === 'usage') {
+            try { usageData = JSON.parse(rawData); } catch (_) {}
           } else if (evtName === 'error') {
             bubble.innerHTML = `<span style="color:#dc2626">Error: ${esc(JSON.parse(rawData))}</span>`;
+            history.pop(); return;
+          } else if (evtName === 'credit_exhausted') {
+            bubble.innerHTML = '';
+            const banner = document.createElement('div');
+            banner.className = 'credit-exhausted-banner';
+            banner.innerHTML = `<strong>&#9888; AI provider credit balance exhausted</strong>`
+              + `<span>This Papyrus instance has run out of API credits and cannot generate a response.</span>`
+              + `<span>Top up your balance with your AI provider, then restart the service.</span>`;
+            bubble.appendChild(banner);
             history.pop(); return;
           } else if (rawData) {
             try {
@@ -623,6 +753,8 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
       const copyBtn = makeCopyBtn(() => accumulated);
       bubble.appendChild(copyBtn);
       if (needsPdf) addPdfButton(bubble);
+      // Inject token usage badge
+      if (usageData) injectUsage(bubble, usageData);
       // Inject sources citations if present
       if (sourcesData.length > 0) injectSources(bubble, sourcesData);
       // Add timestamp above the bubble
@@ -691,6 +823,15 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
     });
   }
 
+  // ── Token usage badge ────────────────────────────────────────────
+  function injectUsage(bubble, usage) {
+    const div = document.createElement('div');
+    div.className = 'token-usage';
+    div.innerHTML = `<span>&#8593; ${usage.inputTokens.toLocaleString()} in</span>`
+                  + `<span>&#8595; ${usage.outputTokens.toLocaleString()} out</span>`;
+    bubble.appendChild(div);
+  }
+
   // ── Sources citations panel ──────────────────────────────────────
   function injectSources(bubble, sources) {
     const details = document.createElement('details');
@@ -755,7 +896,24 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  function updateThemeIcon() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const icon = document.getElementById('theme-icon');
+    if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+  }
+
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      localStorage.setItem('papyrus-theme', isDark ? 'light' : 'dark');
+      updateThemeIcon();
+    });
+  }
+
   window.addEventListener('DOMContentLoaded', () => {
+    updateThemeIcon();
     inputEl.focus();
     checkHealth();
     setInterval(checkHealth, 60_000);

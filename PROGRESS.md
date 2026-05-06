@@ -221,12 +221,183 @@
 
 ---
 
+## MCP Transport — Streamable HTTP ✅
+
+**Completed:** 2026-04-15
+
+Migrated the MCP server from the deprecated SSE transport to the current Streamable HTTP transport, making it compatible with claude.ai browser chat, Claude mobile, and Claude Desktop.
+
+### What changed
+
+| File | Change |
+|------|--------|
+| `pom.xml` | Spring Boot `3.3.5` → `3.5.13`; Spring AI `1.0.0` → `1.1.4` |
+| `papyrus-mcp/src/main/resources/application.yml` | Added `spring.ai.mcp.server.protocol: STREAMABLE` |
+| `papyrus-mcp/pom.xml` | Updated description |
+
+### Why Spring Boot had to be upgraded too
+
+Spring AI 1.0.x (all patch releases) uses MCP Java SDK 0.10.0, which only includes `WebMvcSseServerTransportProvider` (SSE). Streamable HTTP (`WebMvcStreamableServerTransportProvider`) was added in MCP SDK 0.16+, which is only available in Spring AI 1.1.x. Spring AI 1.1.x requires Spring Boot 3.5.x, so both had to move together.
+
+### Transport comparison
+
+| | SSE (old) | Streamable HTTP (new) |
+|--|-----------|----------------------|
+| Connect endpoint | `GET /sse` | — |
+| Message endpoint | `POST /mcp/message?sessionId=...` | `POST /mcp` |
+| Session model | Stateful (session ID per connection) | Stateless-friendly |
+| claude.ai / mobile | Not supported | Supported via Settings → Connectors |
+| MCP spec | 2024-11-05 | 2025-03-26 |
+
+### Key decisions
+
+- Stayed on `spring-ai-starter-mcp-server-webmvc` — same dependency, transport is now selected via the `protocol` property rather than a separate artifact
+- No code changes required in `McpConfig`, `IngestTools`, or `SearchTools` — the Spring AI tool API is stable across 1.0→1.1
+
+---
+
+## Credit Exhausted Indicator ✅
+
+**Completed:** 2026-04-16
+
+When the Anthropic API account has no remaining credits, the chat UI now shows a clear amber warning banner instead of a generic red error.
+
+### What was built
+
+| Layer | Change |
+|-------|--------|
+| `papyrus-core` | New `CreditExhaustedException` (unchecked, two constructors) |
+| `papyrus-pipeline` | `AnthropicChatService` — detects HTTP 402 and billing 429; wraps as `CreditExhaustedException` at both eager (createStreaming) and lazy (flatMap) throw points |
+| `papyrus-api` | `ChatController` — dedicated `catch (CreditExhaustedException)` block emits `event: credit_exhausted` SSE event then calls `emitter.complete()` |
+| `papyrus-api` (UI) | `chat.html` — new `.credit-exhausted-banner` CSS (amber) and `credit_exhausted` SSE branch; clears thinking bubble, shows banner with link to Anthropic billing console, cleans up `history[]` |
+
+### Key decisions
+
+- Used `AnthropicServiceException` base class (not separate subtypes) for a single-catch approach covering 402 and billing 429
+- Two-point wrapping in `streamChat()` covers both eager and lazy SDK throws
+- `emitter.complete()` (not `completeWithError`) ensures the event is flushed before the response closes
+- Banner is amber (`#fffbeb` / `#f59e0b`) — visually distinct from the existing red generic error span
+
+---
+
+## Evolink AI Chat Provider ✅
+
+**Completed:** 2026-04-27
+
+Adds `CHAT_PROVIDER=evolink` as a third chat provider option, using the Evolink AI gateway (OpenAI-compatible SSE streaming).
+
+### What was built
+
+| Layer | Change |
+|-------|--------|
+| `papyrus-pipeline` config | `EvolinkChatProperties` record; `evolink` field added to `ChatProperties` |
+| `papyrus-pipeline` chat | New `EvolinkChatService` — OpenAI SSE streaming, 402/429 → `CreditExhaustedException` |
+| `papyrus-api` config | `evolink` block added to `application.yml` |
+| `papyrus-mcp` config | `evolink` block added to `application.yml` |
+| `papyrus-api` UI | Credit-exhausted banner message made provider-generic |
+| Tests | 7 unit tests for `EvolinkChatService.parseSseLine()` (all pass) |
+| Docs | `CLAUDE.md` Key Configuration table updated with 3 new env vars |
+
+### Key decisions
+
+- `OllamaChatService` (RestClient) used as template — same streaming approach, different SSE format and auth header
+- SSE parsing extracted to package-private `parseSseLine(String)` method for direct unit testing
+- 429 mapped to `CreditExhaustedException` alongside 402 — Evolink uses 429 for quota exhaustion, matching the Anthropic pattern
+- No new ADR required — ADR-005 explicitly anticipated OpenAI-compatible provider additions
+- Credit-exhausted banner text updated to be provider-generic (not Anthropic-specific)
+
+### Test results
+
+| Class | Tests | Result |
+|-------|-------|--------|
+| `EvolinkChatServiceTest` | 7 | ✅ All pass |
+
+---
+
+## Configurable OCR Correction Providers ✅
+
+**Completed:** 2026-04-27
+
+`OCR_PROVIDER` env var (independent of `CHAT_PROVIDER`) selects the LLM for Tesseract post-processing. All three providers use the same prompt and the same `correct(imageBytes, mimeType, rawText)` interface.
+
+### What was built
+
+| Layer | Change |
+|-------|--------|
+| `papyrus-pipeline` config | `CorrectionProperties` restructured — `provider`, `model` at top; nested `AnthropicCorrectionProperties`, `OllamaCorrectionProperties`, `EvolinkCorrectionProperties` |
+| `papyrus-pipeline` OCR | `OcrCorrectionService` converted to interface; `AnthropicOcrCorrectionService` (existing logic), `OllamaOcrCorrectionService`, `EvolinkOcrCorrectionService` (new) |
+| `papyrus-api` / `papyrus-mcp` config | `ocr.correction` block updated with nested provider config |
+| Docs | `CLAUDE.md` Key Configuration updated; `.env` updated with `OCR_PROVIDER`, `OCR_CORRECTION_MODEL` |
+
+### Key decisions
+
+- `OCR_PROVIDER` and `CHAT_PROVIDER` are fully independent — different providers can be used for chat and OCR
+- Each implementation handles a different vision API format (Anthropic multipart, OpenAI `image_url`, Ollama `images` array)
+- Ollama requires a vision model (e.g. `llava`) — operator must set `OCR_CORRECTION_MODEL` accordingly
+- `OcrCorrectionService` interface name preserved — `DocumentService` requires no code change
+
+---
+
+## Per-Source Chunking Strategy ✅
+
+**Completed:** 2026-04-27
+
+Each document can now store its own chunking strategy, max-token limit, and overlap — overriding the global default. Three strategies now available: `PARAGRAPH` (existing), `SECTION` (new, regex header detection), `SEMANTIC` (new, embedding-based sentence grouping).
+
+### What was built
+
+| Layer | Change |
+|-------|--------|
+| DB | `V4__add_chunking_strategy.sql` — adds 3 nullable columns to `document_sources` |
+| `papyrus-pipeline` config | Added `SEMANTIC`, `SECTION` to `ChunkingStrategy`; added `SemanticChunkingProperties`, `SectionChunkingProperties` nested records to `PapyrusProperties` |
+| `papyrus-pipeline` chunking | New `ChunkingConfig` value object; new `SentenceSplitter` utility; `ChunkingService` extended with `chunkBySemantic()`, `chunkBySection()`, and `chunk(ExtractedText, ChunkingConfig)` overload |
+| `papyrus-core` embedding | `EmbeddingService.embedBatch()` default method (loop fallback); `VoyageAiEmbeddingService` overrides with native batch endpoint |
+| `papyrus-pipeline` entity | `DocumentSourceEntity` gains 3 new JPA fields |
+| `papyrus-core` domain | `Source` record extended with `chunkingStrategy`, `chunkingMaxTokens`, `chunkingOverlapTokens` |
+| `papyrus-pipeline` store | `VectorStoreService.toSource()` maps new fields |
+| `papyrus-api` service | `DocumentService.ingest()` persists per-source config; `reingest()` propagates stored config automatically |
+| `papyrus-api` controller | 3 new optional `@RequestParam` on `upload()`; `SourceResponse` extended |
+| `papyrus-api` UI | Collapsible "Chunking options" section on `ingest.html`; strategy badge on `manage.html` |
+| Config | `application.yml` (api + mcp) aligned to env vars; 7 new chunking env vars |
+| Docs | `CLAUDE.md` Key Configuration updated with all new env vars |
+
+### Key decisions
+
+- Nullable per-source columns (null = use global default) ensures full backward compatibility
+- `reingest()` reads stored config and propagates it to the new entity — no manual re-selection needed
+- `embedBatch()` default loops over `embed()` so all non-Voyage providers still work without change
+- SECTION strategy: regex header → merge small sections → `fixedSplit()` fallback; zero overlap recommended
+- SEMANTIC strategy: sentence split → Voyage batch embed → cosine similarity breakpoints → `fixedSplit()` fallback
+
+### Recommended per-source settings for known documents
+
+| Document | Strategy | maxTokens | overlapTokens |
+|----------|----------|-----------|---------------|
+| SPUM committee minutes (short items) | PARAGRAPH | 512 | 64 |
+| SPUM committee minutes (long preamble/Whereas) | PARAGRAPH | 900 | 100 |
+| WMC Employee Handbook (two-column) | SEMANTIC | 512 | 0 |
+| SSD Employee Handbook 2025 (numbered sections) | SECTION | 512 | 0 |
+
+### Test results
+
+| Class | Tests | Result |
+|-------|-------|--------|
+| `ChunkingServiceTest` | 8 | ✅ All pass |
+| `EvolinkChatServiceTest` | 7 | ✅ All pass |
+| `McpToolsTest` | 5 | ✅ All pass |
+
+---
+
 ## Pending
 
 | # | Scope | Status |
 |---|-------|--------|
-| #4 | Duplicate entry detection | Planned — plan at `docs/PLAN_DuplicateHandling.md` |
+| #4 | Duplicate entry detection | Planned — plan at `/home/dennis/devops/projects/papyrus/docs/PLAN_DuplicateHandling.md` |
 | #5 | Edit OCR verification text | Planned |
 | #7 | Rename ingested image from content | Planned |
+| — | Credit exhausted indicator (chat UI) | ✅ Done — `feat/credit-exhausted-indicator` |
+| #10 | File size warning | ✅ Done — `fix/file-size-warning` |
+| — | Evolink AI chat provider | ✅ Done — `feat/evolink-chat-provider` |
+| — | Per-source chunking strategy | ✅ Done — `feat/per-source-chunking-strategy` |
 | — | Auth (API key / OAuth2) | Planned |
 | — | Production hardening (rate limiting, observability) | Planned |

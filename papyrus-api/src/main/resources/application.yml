@@ -3,15 +3,42 @@ papyrus:
     provider: voyage
     voyage:
       api-key: ${VOYAGE_API_KEY:}
-      model: voyage-3-lite
+      model: ${VOYAGE_MODEL:voyage-3-lite}
     ollama:
       base-url: http://localhost:11434
       model: nomic-embed-text
   ocr:
     correction:
       enabled: ${OCR_CORRECTION_ENABLED:false}
-      api-key: ${ANTHROPIC_API_KEY:}
+      provider: ${OCR_PROVIDER:anthropic}
       model: ${OCR_CORRECTION_MODEL:claude-sonnet-4-6}
+      anthropic:
+        api-key: ${ANTHROPIC_API_KEY:}
+      ollama:
+        base-url: ${OCR_OLLAMA_BASE_URL:http://localhost:11434}
+      evolink:
+        api-key: ${EVOLINK_API_KEY:}
+
+  chat:
+    provider: ${CHAT_PROVIDER:anthropic}
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+      model: ${CHAT_MODEL:claude-opus-4-6}
+    ollama:
+      base-url: ${CHAT_OLLAMA_BASE_URL:http://localhost:11434}
+      model: ${CHAT_OLLAMA_MODEL:llama3.2}
+    evolink:
+      api-key: ${EVOLINK_API_KEY:}
+      base-url: ${EVOLINK_BASE_URL:https://direct.evolink.ai}
+      model: ${CHAT_EVOLINK_MODEL:evolink/auto}
+
+  archive:
+    enabled: ${ARCHIVE_ENABLED:false}
+    path: ${ARCHIVE_PATH:/data/papyrus/archive}
+    abbreviations:
+      "[minutes of the meeting of]": ""
+      "[executive committee]": execomm
+      "[western mindanao mission]": wmm
 
   archive:
     enabled: ${ARCHIVE_ENABLED:false}
@@ -22,9 +49,15 @@ papyrus:
       "[western mindanao mission]": wmm
 
   chunking:
-    strategy: paragraph
-    max-tokens: 512
-    overlap-tokens: 64
+    strategy: ${CHUNKING_STRATEGY:PARAGRAPH}
+    max-tokens: ${CHUNKING_MAX_TOKENS:512}
+    overlap-tokens: ${CHUNKING_OVERLAP_TOKENS:64}
+    semantic:
+      threshold: ${CHUNKING_SEMANTIC_THRESHOLD:0.75}
+      min-sentences: ${CHUNKING_SEMANTIC_MIN_SENTENCES:3}
+    section:
+      pattern: ${CHUNKING_SECTION_PATTERN:^\\d\{3\}(\\.\\d\{2,3\})+\\s+\\S}
+      min-tokens: ${CHUNKING_SECTION_MIN_TOKENS:50}
   search:
     default-top-k: 5
 

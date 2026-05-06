@@ -4,14 +4,46 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Papyrus — Manage</title>
+  <script>
+    (function() {
+      const theme = localStorage.getItem('papyrus-theme') || 'dark';
+      if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f7f7f8;
+      --surface: #ffffff;
+      --border: #e5e7eb;
+      --text: #1a1a1a;
+      --text-muted: #6b7280;
+      --text-faint: #9ca3af;
+      --code-bg: #f3f4f6;
+      --table-head: #f9fafb;
+      --input-bg: #ffffff;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0f0f13;
+      --surface: #1c1c24;
+      --border: #2e2e3a;
+      --text: #e8e8f0;
+      --text-muted: #8888a8;
+      --text-faint: #55556a;
+      --code-bg: #1a1a24;
+      --table-head: #1a1a24;
+      --input-bg: #1c1c24;
+    }
 
     html, body { height: 100%; }
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #f7f7f8;
-      color: #1a1a1a;
+      background: var(--bg);
+      color: var(--text);
       display: flex;
       flex-direction: row;
     }
@@ -80,14 +112,14 @@
 
     #header {
       padding: 1.25rem 2rem 1rem;
-      border-bottom: 1px solid #e5e7eb;
-      background: #fff;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
       display: flex;
       align-items: center;
       gap: 1rem;
       flex-wrap: wrap;
     }
-    #header h1 { font-size: 1.1rem; font-weight: 700; flex: 1; }
+    #header h1 { font-size: 1.1rem; font-weight: 700; flex: 1; color: var(--text); }
 
     #header-actions {
       display: flex;
@@ -115,22 +147,23 @@
     /* ── Filter bar ───────────────────────────────────────────────── */
     #filter-bar {
       padding: .75rem 2rem;
-      background: #f9fafb;
-      border-bottom: 1px solid #e5e7eb;
+      background: var(--table-head);
+      border-bottom: 1px solid var(--border);
       display: flex;
       gap: .75rem;
       align-items: center;
       flex-wrap: wrap;
     }
-    #filter-bar label { font-size: .85rem; color: #6b7280; }
+    #filter-bar label { font-size: .85rem; color: var(--text-muted); }
     #filter-bar select, #filter-bar input {
       padding: .35rem .75rem;
-      border: 1px solid #d1d5db;
+      border: 1px solid var(--border);
       border-radius: 6px;
       font-size: .88rem;
-      background: #fff;
+      background: var(--input-bg);
+      color: var(--text);
     }
-    #doc-count { font-size: .82rem; color: #9ca3af; margin-left: auto; }
+    #doc-count { font-size: .82rem; color: var(--text-faint); margin-left: auto; }
 
     /* ── Table ───────────────────────────────────────────────────── */
     #table-wrap {
@@ -151,16 +184,16 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: .05em;
-      color: #6b7280;
-      border-bottom: 2px solid #e5e7eb;
-      background: #f9fafb;
+      color: var(--text-muted);
+      border-bottom: 2px solid var(--border);
+      background: var(--table-head);
       position: sticky;
       top: 0;
       z-index: 1;
     }
-    tbody tr { border-bottom: 1px solid #f3f4f6; }
-    tbody tr:hover { background: #f9fafb; }
-    td { padding: .65rem .75rem; vertical-align: middle; }
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:hover { background: var(--code-bg); }
+    td { padding: .65rem .75rem; vertical-align: middle; color: var(--text); }
 
     .col-check { width: 36px; text-align: center; }
     .col-file  { min-width: 180px; }
@@ -185,13 +218,13 @@
     .archive-name {
       font-family: monospace;
       font-size: .82rem;
-      color: #4b5563;
+      color: var(--text-muted);
     }
     .archive-name a { color: #4f46e5; text-decoration: none; }
     .archive-name a:hover { text-decoration: underline; }
 
-    .file-name { font-weight: 500; }
-    .file-type { font-size: .78rem; color: #9ca3af; text-transform: uppercase; font-weight: 600; }
+    .file-name { font-weight: 500; color: var(--text); }
+    .file-type { font-size: .78rem; color: var(--text-faint); text-transform: uppercase; font-weight: 600; }
 
     /* ── Job toast ───────────────────────────────────────────────── */
     #toast-area {
@@ -204,8 +237,8 @@
       z-index: 100;
     }
     .toast {
-      background: #1a1a2e;
-      color: #e0e0e0;
+      background: var(--surface);
+      color: var(--text);
       padding: .65rem 1rem;
       border-radius: 10px;
       font-size: .85rem;
@@ -215,6 +248,7 @@
       gap: .65rem;
       box-shadow: 0 4px 16px rgba(0,0,0,.25);
       animation: slideIn .2s ease;
+      border: 1px solid var(--border);
     }
     .toast.toast-ok  { border-left: 4px solid #22c55e; }
     .toast.toast-err { border-left: 4px solid #ef4444; }
@@ -251,6 +285,9 @@
     </a>
   </nav>
   <div id="sidebar-footer">
+    <button id="theme-toggle" style="background: none; border: none; color: #a0a0c0; font-size: 1.1rem; cursor: pointer; padding: 0.4rem; margin-right: auto;" title="Toggle dark mode">
+      <span id="theme-icon">☀️</span>
+    </button>
     <div class="health-dot" id="health-dot"></div>
     <span id="health-label">checking…</span>
   </div>
@@ -317,6 +354,23 @@
   let allDocs = [];
   let filtered = [];
   const IMAGE_TYPES = ['image/png','image/jpeg','image/jpg','image/tiff','image/bmp','image/gif'];
+
+  // ── Theme toggle ─────────────────────────────────────────────────
+  function updateThemeIcon() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const icon = document.getElementById('theme-icon');
+    if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+  }
+
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      localStorage.setItem('papyrus-theme', isDark ? 'light' : 'dark');
+      updateThemeIcon();
+    });
+  }
 
   // ── Utilities ────────────────────────────────────────────────────
   function esc(s) {
@@ -428,7 +482,10 @@
         <td class="col-archive">${archiveCell}</td>
         <td class="col-type"><span class="file-type">${esc(fileTypeLabel(d.contentType, d.filename))}</span></td>
         <td class="col-date">${formatDate(d.createdAt)}</td>
-        <td class="col-status"><span class="badge ${statusBadge}">${esc(d.status)}</span></td>
+        <td class="col-status">
+          <span class="badge ${statusBadge}">${esc(d.status)}</span>
+          ${d.chunkingStrategy ? `<div style="margin-top:.3rem;font-size:.72rem;color:#6366f1;font-weight:500" title="Stored chunking config — re-ingest will use this automatically">${esc(d.chunkingStrategy)}${d.chunkingMaxTokens ? ' · ' + d.chunkingMaxTokens + 't' : ''}</div>` : ''}
+        </td>
         <td class="col-action" style="text-align:right">
           ${canReingest
             ? `<button class="btn btn-ghost" style="font-size:.8rem;padding:.3rem .7rem" onclick="reingestOne('${d.id}', '${esc(d.filename)}')">Re-ingest</button>`
@@ -537,6 +594,7 @@
   // ── Init ─────────────────────────────────────────────────────────
   checkHealth();
   loadDocuments();
+  updateThemeIcon();
 </script>
 </body>
 </html>

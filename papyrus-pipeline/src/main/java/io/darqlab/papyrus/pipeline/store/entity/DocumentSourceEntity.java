@@ -2,6 +2,7 @@ package io.darqlab.papyrus.pipeline.store.entity;
 
 import io.darqlab.papyrus.core.domain.Document;
 import io.darqlab.papyrus.core.domain.IngestionStatus;
+import io.darqlab.papyrus.pipeline.config.ChunkingStrategy;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -31,6 +32,16 @@ public class DocumentSourceEntity {
 
     @Column(name = "archive_source_id")
     private UUID archiveSourceId;
+
+    @Column(name = "chunking_strategy")
+    @Enumerated(EnumType.STRING)
+    private ChunkingStrategy chunkingStrategy;
+
+    @Column(name = "chunking_max_tokens")
+    private Integer chunkingMaxTokens;
+
+    @Column(name = "chunking_overlap_tokens")
+    private Integer chunkingOverlapTokens;
 
     @Column(name = "file_size")
     private Long fileSize;
@@ -86,6 +97,12 @@ public class DocumentSourceEntity {
     public void setArchiveFilename(String archiveFilename) { this.archiveFilename = archiveFilename; }
     public UUID getArchiveSourceId() { return archiveSourceId; }
     public void setArchiveSourceId(UUID archiveSourceId) { this.archiveSourceId = archiveSourceId; }
+    public ChunkingStrategy getChunkingStrategy() { return chunkingStrategy; }
+    public void setChunkingStrategy(ChunkingStrategy chunkingStrategy) { this.chunkingStrategy = chunkingStrategy; }
+    public Integer getChunkingMaxTokens() { return chunkingMaxTokens; }
+    public void setChunkingMaxTokens(Integer chunkingMaxTokens) { this.chunkingMaxTokens = chunkingMaxTokens; }
+    public Integer getChunkingOverlapTokens() { return chunkingOverlapTokens; }
+    public void setChunkingOverlapTokens(Integer chunkingOverlapTokens) { this.chunkingOverlapTokens = chunkingOverlapTokens; }
     public IngestionStatus getStatus() { return status; }
     public void setStatus(IngestionStatus status) { this.status = status; }
     public void setError(String error) { this.error = error; }

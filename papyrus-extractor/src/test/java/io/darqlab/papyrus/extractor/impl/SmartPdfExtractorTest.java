@@ -1,14 +1,20 @@
 package io.darqlab.papyrus.extractor.impl;
 
 import io.darqlab.papyrus.core.domain.ExtractedText;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
-import java.util.List;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class SmartPdfExtractorTest {
@@ -25,72 +31,141 @@ class SmartPdfExtractorTest {
     }
 
     @Test
-    void extract_digitalPdfWithDenseText_doesNotInvokeOcr() {
-        String denseText = "A".repeat(500);
-        ExtractedText digitalResult = new ExtractedText(denseText, List.of(denseText), 1, false);
+    void extract_digitalPdf_noOcr() throws IOException {
+        String denseText = "A".repeat(200);
+        byte[] pdfBytes = buildPdf(denseText);
 
-        DigitalPdfExtractor digital = mock(DigitalPdfExtractor.class);
-        OcrExtractor ocr            = mock(OcrExtractor.class);
+        OcrExtractor ocr = mock(OcrExtractor.class);
+        SmartPdfExtractor extractor = new SmartPdfExtractor(ocr);
 
-        when(digital.extract(any(), eq("doc.pdf"))).thenReturn(digitalResult);
+        ExtractedText result = extractor.extract(new ByteArrayInputStream(pdfBytes), "doc.pdf");
 
-        SmartPdfExtractor extractor = new SmartPdfExtractor(digital, ocr);
-        ExtractedText result = extractor.extract(new ByteArrayInputStream(new byte[0]), "doc.pdf");
-
-        assertSame(digitalResult, result);
+        assertFalse(result.ocrUsed());
+        assertTrue(result.content().contains("A"));
         verifyNoInteractions(ocr);
     }
 
     @Test
-    void extract_scannedPdfWithSparseText_fallsBackToOcr() {
-        String sparseText = "hi"; // << 100 chars/page
-        ExtractedText digitalResult = new ExtractedText(sparseText, List.of(sparseText), 1, false);
-        ExtractedText ocrResult     = new ExtractedText("Full OCR text here.", List.of("Full OCR text here."), 1, true);
+    void extract_blankPage_ocrUsed() throws IOException {
+        byte[] pdfBytes = buildPdf(null); // blank page — no text layer
 
-        DigitalPdfExtractor digital = mock(DigitalPdfExtractor.class);
-        OcrExtractor ocr            = mock(OcrExtractor.class);
+        OcrExtractor ocr = mock(OcrExtractor.class);
+        when(ocr.extractPage(any(PDDocument.class), any(PDFRenderer.class), eq(0)))
+                .thenReturn("OCR extracted text");
 
-        when(digital.extract(any(), eq("scan.pdf"))).thenReturn(digitalResult);
-        when(ocr.extract(any(), eq("scan.pdf"))).thenReturn(ocrResult);
+        SmartPdfExtractor extractor = new SmartPdfExtractor(ocr);
+        ExtractedText result = extractor.extract(new ByteArrayInputStream(pdfBytes), "scan.pdf");
 
-        SmartPdfExtractor extractor = new SmartPdfExtractor(digital, ocr);
-        ExtractedText result = extractor.extract(new ByteArrayInputStream(new byte[0]), "scan.pdf");
-
-        assertSame(ocrResult, result);
-        verify(ocr).extract(any(), eq("scan.pdf"));
+        assertTrue(result.ocrUsed());
+        assertEquals("OCR extracted text", result.content());
+        verify(ocr).extractPage(any(PDDocument.class), any(PDFRenderer.class), eq(0));
     }
 
     @Test
-    void extract_emptyPdf_fallsBackToOcr() {
-        ExtractedText digitalResult = new ExtractedText("", List.of(), 0, false);
-        ExtractedText ocrResult     = new ExtractedText("", List.of(), 0, true);
+    void extract_mixedPdf_ocrOnlyOnSparsePages() throws IOException {
+        // page 0: dense text; page 1: blank (image-only)
+        byte[] pdfBytes = buildMultiPagePdf("A".repeat(200), null);
 
-        DigitalPdfExtractor digital = mock(DigitalPdfExtractor.class);
-        OcrExtractor ocr            = mock(OcrExtractor.class);
+        OcrExtractor ocr = mock(OcrExtractor.class);
+        when(ocr.extractPage(any(), any(), eq(1))).thenReturn("OCR page 1");
 
-        when(digital.extract(any(), any())).thenReturn(digitalResult);
-        when(ocr.extract(any(), any())).thenReturn(ocrResult);
+        SmartPdfExtractor extractor = new SmartPdfExtractor(ocr);
+        ExtractedText result = extractor.extract(new ByteArrayInputStream(pdfBytes), "mixed.pdf");
 
-        SmartPdfExtractor extractor = new SmartPdfExtractor(digital, ocr);
-        extractor.extract(new ByteArrayInputStream(new byte[0]), "empty.pdf");
-
-        verify(ocr).extract(any(), any());
+        assertTrue(result.ocrUsed());
+        assertEquals(2, result.pageCount());
+        verify(ocr, never()).extractPage(any(), any(), eq(0));
+        verify(ocr).extractPage(any(), any(), eq(1));
     }
 
     @Test
-    void threshold_exactlyAtBoundary_usesDigital() {
-        // exactly 100 chars/page → digital (>= threshold)
-        String text = "A".repeat(100);
-        ExtractedText digitalResult = new ExtractedText(text, List.of(text), 1, false);
+    void extract_allBlankPages_allOcr() throws IOException {
+        byte[] pdfBytes = buildMultiPagePdf(null, null);
 
-        DigitalPdfExtractor digital = mock(DigitalPdfExtractor.class);
-        OcrExtractor ocr            = mock(OcrExtractor.class);
+        OcrExtractor ocr = mock(OcrExtractor.class);
+        when(ocr.extractPage(any(), any(), anyInt())).thenReturn("ocr text");
 
-        when(digital.extract(any(), any())).thenReturn(digitalResult);
+        SmartPdfExtractor extractor = new SmartPdfExtractor(ocr);
+        ExtractedText result = extractor.extract(new ByteArrayInputStream(pdfBytes), "all-images.pdf");
 
-        SmartPdfExtractor extractor = new SmartPdfExtractor(digital, ocr);
-        extractor.extract(new ByteArrayInputStream(new byte[0]), "boundary.pdf");
+        assertTrue(result.ocrUsed());
+        assertEquals(2, result.pageCount());
+        verify(ocr).extractPage(any(), any(), eq(0));
+        verify(ocr).extractPage(any(), any(), eq(1));
+    }
 
+    @Test
+    void extract_exactlyAtThreshold_usesDigital() throws IOException {
+        // CHARS_PER_PAGE_THRESHOLD == 100.0; exactly 100 chars must use digital, not OCR
+        String text = "A".repeat((int) SmartPdfExtractor.CHARS_PER_PAGE_THRESHOLD);
+        byte[] pdfBytes = buildPdf(text);
+
+        OcrExtractor ocr = mock(OcrExtractor.class);
+        SmartPdfExtractor extractor = new SmartPdfExtractor(ocr);
+        ExtractedText result = extractor.extract(new ByteArrayInputStream(pdfBytes), "boundary.pdf");
+
+        assertFalse(result.ocrUsed());
         verifyNoInteractions(ocr);
+    }
+
+    @Test
+    void extract_sparseText_usesOcr() throws IOException {
+        // PDFTextStripper adds trailing whitespace; use a clearly sub-threshold value (10 chars)
+        // to ensure digital extraction yields < CHARS_PER_PAGE_THRESHOLD regardless of padding.
+        String text = "A".repeat(10);
+        byte[] pdfBytes = buildPdf(text);
+
+        OcrExtractor ocr = mock(OcrExtractor.class);
+        when(ocr.extractPage(any(), any(), eq(0))).thenReturn("ocr result");
+
+        SmartPdfExtractor extractor = new SmartPdfExtractor(ocr);
+        ExtractedText result = extractor.extract(new ByteArrayInputStream(pdfBytes), "sparse.pdf");
+
+        assertTrue(result.ocrUsed());
+        verify(ocr).extractPage(any(), any(), eq(0));
+    }
+
+    @Test
+    void extract_digitalPdf_pageCountMatches() throws IOException {
+        byte[] pdfBytes = buildMultiPagePdf("A".repeat(200), "B".repeat(200), "C".repeat(200));
+
+        OcrExtractor ocr = mock(OcrExtractor.class);
+        SmartPdfExtractor extractor = new SmartPdfExtractor(ocr);
+        ExtractedText result = extractor.extract(new ByteArrayInputStream(pdfBytes), "three-pages.pdf");
+
+        assertFalse(result.ocrUsed());
+        assertEquals(3, result.pageCount());
+        assertEquals(3, result.pageTexts().size());
+        verifyNoInteractions(ocr);
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    /** Builds a single-page PDF. Pass null for a blank page (no text layer). */
+    private byte[] buildPdf(String text) throws IOException {
+        return buildMultiPagePdf(text);
+    }
+
+    /** Builds a multi-page PDF. Null entries produce blank pages. */
+    private byte[] buildMultiPagePdf(String... pageTexts) throws IOException {
+        try (PDDocument doc = new PDDocument();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            PDType1Font font = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
+            for (String text : pageTexts) {
+                PDPage page = new PDPage();
+                doc.addPage(page);
+                if (text != null && !text.isEmpty()) {
+                    try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
+                        cs.beginText();
+                        cs.setFont(font, 12);
+                        cs.newLineAtOffset(50, 700);
+                        cs.showText(text);
+                        cs.endText();
+                    }
+                }
+            }
+            doc.save(out);
+            return out.toByteArray();
+        }
     }
 }

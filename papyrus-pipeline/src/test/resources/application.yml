@@ -9,10 +9,24 @@ papyrus:
       model: nomic-embed-text
   archive:
     enabled: false
+  chat:
+    provider: anthropic
+    anthropic:
+      api-key: test-key-not-real
+      model: claude-opus-4-6
+    ollama:
+      base-url: http://localhost:11434
+      model: llama3.2
   chunking:
     strategy: paragraph
     max-tokens: 512
     overlap-tokens: 64
+    semantic:
+      threshold: 0.75
+      min-sentences: 3
+    section:
+      pattern: "^\\d{3}(\\.\\d{2,3})+\\s+\\S"
+      min-tokens: 50
   search:
     default-top-k: 5
 
