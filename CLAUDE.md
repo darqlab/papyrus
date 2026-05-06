@@ -60,9 +60,9 @@ All docs live in `/home/dennis/devops/projects/papyrus/docs/`.
 | `Papyrus_OcrProviders_IA.md` | Configurable OCR correction providers — Issue Analysis |
 | `Papyrus_OcrProviders_IP.md` | Configurable OCR correction providers — Implementation Plan |
 | `Papyrus_OcrProviders_TM.md` | Configurable OCR correction providers — Task Management |
-| `Papyrus_PerSourceChunkingStrategy_IA.md` | Per-source chunking strategy (PARAGRAPH/SECTION/SEMANTIC) — Issue Analysis (Draft) |
-| `Papyrus_PerSourceChunkingStrategy_IP.md` | Per-source chunking strategy — Implementation Plan (Draft) |
-| `Papyrus_PerSourceChunkingStrategy_TM.md` | Per-source chunking strategy — Task Management (Draft) |
+| `Papyrus_PerSourceChunkingStrategy_IA.md` | Per-source chunking strategy (PARAGRAPH/SECTION/SEMANTIC) — Issue Analysis (✅ complete) |
+| `Papyrus_PerSourceChunkingStrategy_IP.md` | Per-source chunking strategy — Implementation Plan (✅ complete) |
+| `Papyrus_PerSourceChunkingStrategy_TM.md` | Per-source chunking strategy — Task Management (✅ complete) |
 
 ---
 
