@@ -6,14 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Branch & PR Workflow
 
-Feature work follows: **`feature branch → staging → master`**
+Feature work follows: **`feature branch → develop → staging → master`**
 
-1. Create feature branch from `master`
-2. Open PR targeting `staging` (`gh pr create --base staging`)
-3. Merge to staging, validate on staging environment
-4. Open a separate PR from `staging` → `master` to promote to production
+1. Create feature branch from `develop`
+2. Open PR targeting `develop` (`gh pr create --base develop`)
+3. Merge to develop; when ready to release, merge `develop → staging`
+4. Validate on staging environment, then merge `staging → master`
 
-Never merge a feature branch directly to `master`.
+Never merge a feature branch directly to `staging` or `master`.
 
 ## Documentation Methodology
 
