@@ -42,6 +42,7 @@ public class IngestTools {
             return objectMapper.writeValueAsString(Map.of(
                     "source_id",  result.sourceId().toString(),
                     "chunk_count", result.chunkCount(),
+                    "duplicate",  result.duplicate(),
                     "status",     "DONE"
             ));
 
@@ -67,6 +68,7 @@ public class IngestTools {
             return objectMapper.writeValueAsString(Map.of(
                     "source_id",   result.sourceId().toString(),
                     "chunk_count", result.chunkCount(),
+                    "duplicate",   result.duplicate(),
                     "url",         url,
                     "status",      "DONE"
             ));

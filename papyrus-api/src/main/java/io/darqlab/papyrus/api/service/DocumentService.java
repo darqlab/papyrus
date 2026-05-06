@@ -16,6 +16,7 @@ import io.darqlab.papyrus.pipeline.ocr.OcrCorrectionService;
 import io.darqlab.papyrus.pipeline.store.VectorStoreService;
 import io.darqlab.papyrus.pipeline.store.entity.DocumentSourceEntity;
 import io.darqlab.papyrus.pipeline.store.repository.DocumentSourceRepository;
+import io.darqlab.papyrus.pipeline.util.ContentHasher;
 import org.jsoup.Jsoup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -80,12 +82,20 @@ public class DocumentService {
                                    ChunkingStrategy chunkingStrategy,
                                    Integer chunkingMaxTokens,
                                    Integer chunkingOverlapTokens) {
+        String hash = ContentHasher.sha256(content);
+        Optional<DocumentSourceEntity> existing = sourceRepository.findByContentHash(hash);
+        if (existing.isPresent()) {
+            DocumentSourceEntity e = existing.get();
+            return new IngestionResult(e.getId(), e.getFilename(), 0, true);
+        }
+
         String mimeType = MimeTypeDetector.detect(filename);
         UUID sourceId   = UUID.randomUUID();
 
         DocumentSourceEntity source = new DocumentSourceEntity(
                 sourceId, filename, mimeType, (long) content.length,
                 language, IngestionStatus.PROCESSING);
+        source.setContentHash(hash);
         source.setChunkingStrategy(chunkingStrategy);
         source.setChunkingMaxTokens(chunkingMaxTokens);
         source.setChunkingOverlapTokens(chunkingOverlapTokens);
@@ -125,7 +135,7 @@ public class DocumentService {
             if (chunks.isEmpty()) {
                 source.setStatus(IngestionStatus.DONE);
                 sourceRepository.save(source);
-                return new IngestionResult(sourceId, filename, 0);
+                return new IngestionResult(sourceId, filename, 0, false);
             }
 
             List<List<Float>> embeddings = chunks.stream()
@@ -141,7 +151,7 @@ public class DocumentService {
             source.setStatus(IngestionStatus.DONE);
             sourceRepository.save(source);
 
-            return new IngestionResult(sourceId, filename, chunks.size());
+            return new IngestionResult(sourceId, filename, chunks.size(), false);
 
         } catch (Exception e) {
             source.setStatus(IngestionStatus.FAILED);
@@ -153,9 +163,18 @@ public class DocumentService {
 
     /**
      * Fetch a URL with Jsoup, then ingest the HTML content.
+     * Deduplicates by URL first (no HTTP fetch needed), then by content hash after fetching.
+     * After a new ingest, persists the source URL on the created entity.
      */
     @Transactional
     public IngestionResult ingestUrl(String url, String language) {
+        // 1. Deduplicate by URL (no HTTP fetch required)
+        Optional<DocumentSourceEntity> byUrl = sourceRepository.findBySourceUrl(url);
+        if (byUrl.isPresent()) {
+            DocumentSourceEntity e = byUrl.get();
+            return new IngestionResult(e.getId(), URI.create(url).getHost() + ".html", 0, true);
+        }
+
         try {
             byte[] html = Jsoup.connect(url)
                     .userAgent("Papyrus/0.1 (+https://github.com/darqlab/papyrus)")
@@ -164,7 +183,18 @@ public class DocumentService {
                     .bodyAsBytes();
 
             String filename = URI.create(url).getHost() + ".html";
-            return ingest(html, filename, language);
+            // 2. Ingest (also deduplicates by content hash internally)
+            IngestionResult result = ingest(html, filename, language);
+
+            // 3. Persist the source URL on the newly created entity
+            if (!result.duplicate()) {
+                sourceRepository.findById(result.sourceId()).ifPresent(e -> {
+                    e.setSourceUrl(url);
+                    sourceRepository.save(e);
+                });
+            }
+
+            return result;
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to fetch URL: " + url + " — " + e.getMessage(), e);
@@ -236,7 +266,7 @@ public class DocumentService {
 
             source.setStatus(IngestionStatus.DONE);
             sourceRepository.save(source);
-            return new IngestionResult(newSourceId, original.filename(), chunks.size());
+            return new IngestionResult(newSourceId, original.filename(), chunks.size(), false);
 
         } catch (Exception e) {
             source.setStatus(IngestionStatus.FAILED);
@@ -246,7 +276,17 @@ public class DocumentService {
         }
     }
 
-    public record IngestionResult(UUID sourceId, String filename, int chunkCount) {}
+    public record IngestionResult(UUID sourceId, String filename, int chunkCount, boolean duplicate) {}
+
+    /**
+     * Check whether a duplicate already exists for the given content, based on SHA-256 hash.
+     * Returns the existing sourceId if found, or empty if this content is new.
+     * Used by the controller for an early synchronous check before spawning a virtual thread.
+     */
+    public Optional<UUID> findDuplicate(byte[] content) {
+        String hash = ContentHasher.sha256(content);
+        return sourceRepository.findByContentHash(hash).map(DocumentSourceEntity::getId);
+    }
 
     private ChunkingConfig resolveConfig(ChunkingStrategy strategy, Integer maxTokens, Integer overlapTokens) {
         return new ChunkingConfig(

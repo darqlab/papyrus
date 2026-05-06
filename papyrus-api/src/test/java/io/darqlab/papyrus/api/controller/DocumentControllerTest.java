@@ -72,6 +72,7 @@ class DocumentControllerTest {
         IngestionJob job = new IngestionJob(jobId, io.darqlab.papyrus.core.domain.JobStatus.RUNNING,
                 1, 0, 0, java.time.Instant.now(), java.time.Instant.now());
         when(jobService.createJob(1)).thenReturn(job);
+        when(documentService.findDuplicate(any())).thenReturn(java.util.Optional.empty());
 
         MockMultipartFile file = new MockMultipartFile(
                 "file", "report.txt", "text/plain", "Hello Papyrus".getBytes());

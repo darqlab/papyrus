@@ -198,10 +198,11 @@ public class ArchiveService {
         String slug = slugify(extractedText, fallbackFilename);
 
         StringBuilder sb = new StringBuilder();
-        sb.append(date).append('-').append(slug);
+        sb.append(date);
         if (page != null) {
-            sb.append('-').append(page);
+            sb.append('_').append(page);
         }
+        sb.append('_').append(slug);
         return sb.toString();
     }
 

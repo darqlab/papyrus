@@ -33,6 +33,12 @@ public class DocumentSourceEntity {
     @Column(name = "archive_source_id")
     private UUID archiveSourceId;
 
+    @Column(name = "content_hash")
+    private String contentHash;
+
+    @Column(name = "source_url")
+    private String sourceUrl;
+
     @Column(name = "chunking_strategy")
     @Enumerated(EnumType.STRING)
     private ChunkingStrategy chunkingStrategy;
@@ -97,6 +103,10 @@ public class DocumentSourceEntity {
     public void setArchiveFilename(String archiveFilename) { this.archiveFilename = archiveFilename; }
     public UUID getArchiveSourceId() { return archiveSourceId; }
     public void setArchiveSourceId(UUID archiveSourceId) { this.archiveSourceId = archiveSourceId; }
+    public String getContentHash() { return contentHash; }
+    public void setContentHash(String contentHash) { this.contentHash = contentHash; }
+    public String getSourceUrl() { return sourceUrl; }
+    public void setSourceUrl(String sourceUrl) { this.sourceUrl = sourceUrl; }
     public ChunkingStrategy getChunkingStrategy() { return chunkingStrategy; }
     public void setChunkingStrategy(ChunkingStrategy chunkingStrategy) { this.chunkingStrategy = chunkingStrategy; }
     public Integer getChunkingMaxTokens() { return chunkingMaxTokens; }

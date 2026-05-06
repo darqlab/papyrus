@@ -93,6 +93,8 @@ class McpToolsTest {
 
         DocumentSourceRepository sourceRepo = mock(DocumentSourceRepository.class);
         when(sourceRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(sourceRepo.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(sourceRepo.findByContentHash(any())).thenReturn(java.util.Optional.empty());
 
         ArchiveService archiveService = new ArchiveService(props);
         IngestionOrchestrator orchestrator = new IngestionOrchestrator(
@@ -106,7 +108,8 @@ class McpToolsTest {
         assertEquals(storedCount.get(), result.chunkCount());
 
         verify(vectorStore).storeChunks(eq(result.sourceId()), any(), any(), any(), any());
-        verify(sourceRepo, atLeast(2)).save(any()); // initial PROCESSING + final DONE
+        verify(sourceRepo, atLeastOnce()).saveAndFlush(any()); // initial PROCESSING
+        verify(sourceRepo, atLeastOnce()).save(any()); // final DONE
     }
 
     @Test
@@ -130,6 +133,8 @@ class McpToolsTest {
 
         DocumentSourceRepository sourceRepo = mock(DocumentSourceRepository.class);
         when(sourceRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(sourceRepo.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(sourceRepo.findByContentHash(any())).thenReturn(java.util.Optional.empty());
 
         ArchiveService archiveService = new ArchiveService(props);
         IngestionOrchestrator orchestrator = new IngestionOrchestrator(

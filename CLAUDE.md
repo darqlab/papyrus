@@ -4,6 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > Global preferences: see /home/dennis/CLAUDE.md
 
+## Branch & PR Workflow
+
+Feature work follows: **`feature branch → staging → master`**
+
+1. Create feature branch from `master`
+2. Open PR targeting `staging` (`gh pr create --base staging`)
+3. Merge to staging, validate on staging environment
+4. Open a separate PR from `staging` → `master` to promote to production
+
+Never merge a feature branch directly to `master`.
+
 ## Documentation Methodology
 
 > **MANDATORY — Do this before writing any code.**
@@ -45,7 +56,10 @@ All docs live in `/home/dennis/devops/projects/papyrus/docs/`.
 
 | File | Feature |
 |------|---------|
-| `PLAN_DuplicateHandling.md` | Duplicate document detection (#4) — IP only |
+| `PLAN_DuplicateHandling.md` | Duplicate document detection (#4) — superseded by new docs below |
+| `Papyrus_DuplicateDetection_IA.md` | Duplicate document detection — Issue Analysis (✅ complete) |
+| `Papyrus_DuplicateDetection_IP.md` | Duplicate document detection — Implementation Plan (✅ complete) |
+| `Papyrus_DuplicateDetection_TM.md` | Duplicate document detection — Task Management (✅ complete) |
 | `PLAN_CreditExhaustedIndicator.md` | Credit exhausted indicator — detailed code plan (✅ complete) |
 | `Papyrus_CreditExhaustedIndicator_IA.md` | Credit exhausted indicator — Issue Analysis (✅ complete) |
 | `Papyrus_CreditExhaustedIndicator_FR.md` | Credit exhausted indicator — Feature Rationale (✅ complete) |
@@ -60,9 +74,9 @@ All docs live in `/home/dennis/devops/projects/papyrus/docs/`.
 | `Papyrus_OcrProviders_IA.md` | Configurable OCR correction providers — Issue Analysis |
 | `Papyrus_OcrProviders_IP.md` | Configurable OCR correction providers — Implementation Plan |
 | `Papyrus_OcrProviders_TM.md` | Configurable OCR correction providers — Task Management |
-| `Papyrus_PerSourceChunkingStrategy_IA.md` | Per-source chunking strategy (PARAGRAPH/SECTION/SEMANTIC) — Issue Analysis (Draft) |
-| `Papyrus_PerSourceChunkingStrategy_IP.md` | Per-source chunking strategy — Implementation Plan (Draft) |
-| `Papyrus_PerSourceChunkingStrategy_TM.md` | Per-source chunking strategy — Task Management (Draft) |
+| `Papyrus_PerSourceChunkingStrategy_IA.md` | Per-source chunking strategy (PARAGRAPH/SECTION/SEMANTIC) — Issue Analysis (✅ complete) |
+| `Papyrus_PerSourceChunkingStrategy_IP.md` | Per-source chunking strategy — Implementation Plan (✅ complete) |
+| `Papyrus_PerSourceChunkingStrategy_TM.md` | Per-source chunking strategy — Task Management (✅ complete) |
 
 ---
 
