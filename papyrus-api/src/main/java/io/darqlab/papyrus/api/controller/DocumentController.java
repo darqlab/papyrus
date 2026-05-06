@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -65,6 +66,13 @@ public class DocumentController {
         String filename = file.getOriginalFilename() != null ? file.getOriginalFilename() : file.getName();
         byte[] content  = file.getBytes();
 
+        // Synchronous duplicate check — avoids spawning a thread and creating a job for known content
+        Optional<UUID> existingId = documentService.findDuplicate(content);
+        if (existingId.isPresent()) {
+            return ResponseEntity.ok()
+                    .body(new AsyncUploadResponse(existingId.get(), filename, "DONE", true));
+        }
+
         IngestionJob job = jobService.createJob(1);
         jobService.markRunning(job.id());
 
@@ -80,7 +88,7 @@ public class DocumentController {
             }
         });
 
-        return ResponseEntity.accepted().body(new AsyncUploadResponse(job.id(), filename, "QUEUED"));
+        return ResponseEntity.accepted().body(new AsyncUploadResponse(job.id(), filename, "QUEUED", false));
     }
 
     /**
@@ -156,7 +164,7 @@ public class DocumentController {
         String lang = request.language() != null ? request.language() : "eng";
         DocumentService.IngestionResult result = documentService.ingestUrl(request.url(), lang);
         return ResponseEntity.ok(new UploadResponse(
-                result.sourceId(), result.filename(), result.chunkCount(), "DONE"));
+                result.sourceId(), result.filename(), result.chunkCount(), "DONE", result.duplicate()));
     }
 
     /**
@@ -184,7 +192,7 @@ public class DocumentController {
                         ? file.getOriginalFilename() : file.getName();
                 DocumentService.IngestionResult r =
                         documentService.ingest(file.getBytes(), filename, language);
-                results.add(new UploadResponse(r.sourceId(), r.filename(), r.chunkCount(), "DONE"));
+                results.add(new UploadResponse(r.sourceId(), r.filename(), r.chunkCount(), "DONE", r.duplicate()));
                 jobService.recordSuccess(job.id());
             } catch (Exception e) {
                 jobService.recordFailure(job.id());
@@ -268,6 +276,6 @@ public class DocumentController {
             }
         });
 
-        return ResponseEntity.accepted().body(new AsyncUploadResponse(job.id(), source.filename(), "QUEUED"));
+        return ResponseEntity.accepted().body(new AsyncUploadResponse(job.id(), source.filename(), "QUEUED", false));
     }
 }

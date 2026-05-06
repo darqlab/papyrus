@@ -388,11 +388,51 @@ Each document can now store its own chunking strategy, max-token limit, and over
 
 ---
 
+## Duplicate Document Detection ✅
+
+**Completed:** 2026-05-06
+
+Prevents re-ingestion of identical content by computing a SHA-256 hash of raw bytes before processing. Duplicate uploads return the existing `sourceId` immediately without re-embedding.
+
+### What was built
+
+| Layer | Change |
+|-------|--------|
+| DB | `V5__add_duplicate_detection.sql` — `content_hash` (unique partial index) + `source_url` columns on `document_sources` |
+| `papyrus-pipeline` entity | `DocumentSourceEntity` gains `contentHash`, `sourceUrl` JPA fields |
+| `papyrus-pipeline` repo | `findByContentHash()`, `findBySourceUrl()` Spring Data methods |
+| `papyrus-pipeline` util | New `ContentHasher` utility — SHA-256 hex via `java.security.MessageDigest` |
+| `papyrus-api` service | `DocumentService.ingest()` checks hash before creating entity; `ingestUrl()` checks URL then hash; `findDuplicate()` helper for controller pre-check |
+| `papyrus-api` controller | Synchronous dedup pre-check before spawning virtual thread; `duplicate` flag in all responses |
+| DTOs | `IngestionResult`, `UploadResponse`, `AsyncUploadResponse` — `boolean duplicate` added |
+| `papyrus-mcp` | `IngestionOrchestrator` + `IngestTools` — symmetric dedup logic |
+| Tests | `ContentHasherTest` (5 cases); existing controller + MCP tests updated |
+
+### Key decisions
+
+- Hash computed from raw bytes before any extraction — guarantees content-level dedup regardless of filename
+- URL dedup checked first (no HTTP fetch needed on repeat); hash dedup catches same content from different URLs
+- `reingest` endpoint explicitly excluded — intentional re-embedding always proceeds
+- Partial unique index (`WHERE content_hash IS NOT NULL`) leaves existing rows unaffected
+- Duplicate response returns `status: DONE` immediately — no job created, no virtual thread spawned
+
+### Test results
+
+| Test | Result |
+|------|--------|
+| `ContentHasherTest` | ✅ 5/5 pass |
+| Same file uploaded twice | ✅ `duplicate: true`, same sourceId |
+| Same URL ingested twice | ✅ `duplicate: true`, no HTTP fetch |
+| `/reingest` unaffected | ✅ `duplicate: false`, job queued normally |
+| Full suite (192 tests) | ✅ All pass |
+
+---
+
 ## Pending
 
 | # | Scope | Status |
 |---|-------|--------|
-| #4 | Duplicate entry detection | Planned — plan at `/home/dennis/devops/projects/papyrus/docs/PLAN_DuplicateHandling.md` |
+| #4 | Duplicate entry detection | ✅ Done — `feat/duplicate-detection` |
 | #5 | Edit OCR verification text | Planned |
 | #7 | Rename ingested image from content | Planned |
 | — | Credit exhausted indicator (chat UI) | ✅ Done — `feat/credit-exhausted-indicator` |
