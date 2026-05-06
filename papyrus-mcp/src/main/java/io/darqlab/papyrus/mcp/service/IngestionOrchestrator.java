@@ -11,6 +11,7 @@ import io.darqlab.papyrus.pipeline.chunking.ChunkingService;
 import io.darqlab.papyrus.pipeline.store.VectorStoreService;
 import io.darqlab.papyrus.pipeline.store.entity.DocumentSourceEntity;
 import io.darqlab.papyrus.pipeline.store.repository.DocumentSourceRepository;
+import io.darqlab.papyrus.pipeline.util.ContentHasher;
 import org.jsoup.Jsoup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -46,12 +48,20 @@ public class IngestionOrchestrator {
 
     @Transactional
     public IngestionResult ingest(byte[] content, String filename, String language) {
+        String hash = ContentHasher.sha256(content);
+        Optional<DocumentSourceEntity> existing = sourceRepository.findByContentHash(hash);
+        if (existing.isPresent()) {
+            DocumentSourceEntity e = existing.get();
+            return new IngestionResult(e.getId(), 0, true);
+        }
+
         String mimeType = MimeTypeDetector.detect(filename);
         UUID sourceId = UUID.randomUUID();
 
         DocumentSourceEntity source = new DocumentSourceEntity(
                 sourceId, filename, mimeType, (long) content.length,
                 language, IngestionStatus.PROCESSING);
+        source.setContentHash(hash);
         sourceRepository.saveAndFlush(source);
 
         try {
@@ -69,7 +79,7 @@ public class IngestionOrchestrator {
             if (chunks.isEmpty()) {
                 source.setStatus(IngestionStatus.DONE);
                 sourceRepository.save(source);
-                return new IngestionResult(sourceId, 0);
+                return new IngestionResult(sourceId, 0, false);
             }
 
             List<List<Float>> embeddings = chunks.stream()
@@ -85,7 +95,7 @@ public class IngestionOrchestrator {
             source.setStatus(IngestionStatus.DONE);
             sourceRepository.save(source);
 
-            return new IngestionResult(sourceId, chunks.size());
+            return new IngestionResult(sourceId, chunks.size(), false);
 
         } catch (Exception e) {
             source.setStatus(IngestionStatus.FAILED);
@@ -97,6 +107,12 @@ public class IngestionOrchestrator {
 
     @Transactional
     public IngestionResult ingestUrl(String url, String language) {
+        Optional<DocumentSourceEntity> byUrl = sourceRepository.findBySourceUrl(url);
+        if (byUrl.isPresent()) {
+            DocumentSourceEntity e = byUrl.get();
+            return new IngestionResult(e.getId(), 0, true);
+        }
+
         try {
             byte[] html = Jsoup.connect(url)
                     .userAgent("Papyrus/0.1 (+https://github.com/darqlab/papyrus)")
@@ -104,7 +120,16 @@ public class IngestionOrchestrator {
                     .execute()
                     .bodyAsBytes();
             String filename = URI.create(url).getHost() + ".html";
-            return ingest(html, filename, language);
+            IngestionResult result = ingest(html, filename, language);
+
+            if (!result.duplicate()) {
+                sourceRepository.findById(result.sourceId()).ifPresent(e -> {
+                    e.setSourceUrl(url);
+                    sourceRepository.save(e);
+                });
+            }
+
+            return result;
         } catch (Exception e) {
             throw new RuntimeException("Failed to fetch URL: " + url + " — " + e.getMessage(), e);
         }
@@ -119,5 +144,5 @@ public class IngestionOrchestrator {
         return true;
     }
 
-    public record IngestionResult(UUID sourceId, int chunkCount) {}
+    public record IngestionResult(UUID sourceId, int chunkCount, boolean duplicate) {}
 }

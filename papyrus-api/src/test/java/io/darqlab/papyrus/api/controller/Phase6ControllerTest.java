@@ -82,7 +82,7 @@ class Phase6ControllerTest {
     void ingestUrl_validRequest_returns200() throws Exception {
         UUID sourceId = UUID.randomUUID();
         when(documentService.ingestUrl(eq("https://example.com"), eq("eng")))
-                .thenReturn(new DocumentService.IngestionResult(sourceId, "example.com.html", 8));
+                .thenReturn(new DocumentService.IngestionResult(sourceId, "example.com.html", 8, false));
 
         UrlIngestRequest req = new UrlIngestRequest("https://example.com", "eng");
         docMvc.perform(post("/api/documents/url")
@@ -111,8 +111,8 @@ class Phase6ControllerTest {
         IngestionJob job = new IngestionJob(jobId, JobStatus.QUEUED, 2, 0, 0, now(), now());
         when(jobService.createJob(2)).thenReturn(job);
         when(documentService.ingest(any(), anyString(), anyString()))
-                .thenReturn(new DocumentService.IngestionResult(UUID.randomUUID(), "a.txt", 3))
-                .thenReturn(new DocumentService.IngestionResult(UUID.randomUUID(), "b.txt", 5));
+                .thenReturn(new DocumentService.IngestionResult(UUID.randomUUID(), "a.txt", 3, false))
+                .thenReturn(new DocumentService.IngestionResult(UUID.randomUUID(), "b.txt", 5, false));
 
         MockMultipartFile f1 = new MockMultipartFile("files", "a.txt", "text/plain", "Hello".getBytes());
         MockMultipartFile f2 = new MockMultipartFile("files", "b.txt", "text/plain", "World".getBytes());
