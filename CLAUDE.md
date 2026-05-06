@@ -50,6 +50,18 @@ Use `/home/dennis/devops/methodology/Documentation_Compliance_Checklist.md` to v
 | `Project_Technical_Documentation.md` | Full project-level doc template |
 | `Document_Style_Guide.md` | Writing style for all docs |
 
+### Development Checkpoints
+
+All docs live in `/home/dennis/devops/projects/papyrus/docs/`.
+
+| File | Date | Summary |
+|------|------|---------|
+| `CHECKPOINT_2026-04-10.md` | 2026-04-10 | Phase 1–6 complete; core extractors, chunking, pgvector, MCP, REST API |
+| `CHECKPOINT_2026-04-14.md` | 2026-04-14 | UI improvements, dark mode, batch ingest progress bar |
+| `CHECKPOINT_2026-04-15.md` | 2026-04-15 | MCP Streamable HTTP transport; Spring Boot 3.5 + Spring AI 1.1 upgrade |
+| `CHECKPOINT_2026-04-27.md` | 2026-04-27 | Evolink chat provider, configurable OCR providers, external prompt files |
+| `CHECKPOINT_2026-05-06.md` | 2026-05-06 | Per-source chunking, duplicate detection, RBAC + User Management docs, domain → arqhive.systems |
+
 ### Existing plan docs
 
 All docs live in `/home/dennis/devops/projects/papyrus/docs/`.
@@ -77,6 +89,14 @@ All docs live in `/home/dennis/devops/projects/papyrus/docs/`.
 | `Papyrus_PerSourceChunkingStrategy_IA.md` | Per-source chunking strategy (PARAGRAPH/SECTION/SEMANTIC) — Issue Analysis (✅ complete) |
 | `Papyrus_PerSourceChunkingStrategy_IP.md` | Per-source chunking strategy — Implementation Plan (✅ complete) |
 | `Papyrus_PerSourceChunkingStrategy_TM.md` | Per-source chunking strategy — Task Management (✅ complete) |
+| `Zitadel_Setup_Guide.md` | Zitadel deployment + Papyrus project config at auth.arquitech.biz |
+| `Papyrus_RBAC_IA.md` | Application-level RBAC (Zitadel + Spring Security) — Issue Analysis |
+| `Papyrus_RBAC_IP.md` | Application-level RBAC — Implementation Plan |
+| `Papyrus_RBAC_TM.md` | Application-level RBAC — Task Management |
+| `ADR_007_ApplicationLevelRBAC.md` | ADR-007: Spring Security + Zitadel RBAC (supersedes ADR-003) |
+| `Papyrus_UserManagement_IA.md` | User Management UI (admin adds/manages users via Zitadel API) — Issue Analysis |
+| `Papyrus_UserManagement_IP.md` | User Management UI — Implementation Plan |
+| `Papyrus_UserManagement_TM.md` | User Management UI — Task Management |
 
 ---
 
@@ -296,19 +316,19 @@ Changing chat or OCR models does not require re-ingestion.
 ## Staging Deployment
 
 Running stack managed at `/opt/yard/papyrus/` (separate from this repo):
-- `papyrus-api` → `localhost:8081` (public: `https://papyrus.darqlab.net`)
-- `papyrus-mcp` → `localhost:8082` (public: `https://mcp-papyrus.darqlab.net`)
+- `papyrus-api` → `localhost:8081` (public: `https://papyrus.arqhive.systems`)
+- `papyrus-mcp` → `localhost:8082` (public: `https://mcp-papyrus.arqhive.systems`)
 - `papyrus-pgvector` (pgvector/pgvector:pg16)
 
 Production images: `dennisarq/papyrus-api` and `dennisarq/papyrus-mcp` on Docker Hub.
 
-Search endpoint: `POST https://papyrus.darqlab.net/api/search` with body `{"query":"...","topK":5}`
+Search endpoint: `POST https://papyrus.arqhive.systems/api/search` with body `{"query":"...","topK":5}`
 
 ## MCP Servers
 
 | Instance | URL |
 |----------|-----|
-| Staging (remote) | `https://mcp-papyrus.darqlab.net/sse` |
+| Staging (remote) | `https://mcp-papyrus.arqhive.systems/sse` |
 | Local dev | `http://localhost:8082/sse` |
 
 Global Claude Code config (`~/.claude.json`) points `papyrus` to the staging SSE URL.
