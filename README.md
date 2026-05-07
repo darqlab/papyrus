@@ -10,6 +10,7 @@ Self-hosted document intelligence MCP server. Ingest, index, and semantically se
 - REST API for document management and search
 - MCP server (Streamable HTTP transport) for direct integration with AI assistants — works in claude.ai, Claude mobile, and Claude Code
 - Web UI for ingestion and search
+- Role-based access control (RBAC) via Zitadel — roles: `ADMIN`, `CONTRIBUTOR`, `READER`
 
 ## Architecture
 
@@ -84,6 +85,13 @@ SearchController → VoyageAiEmbeddingService.embed(query)
 | **Prompts** | | |
 | `CHAT_PROMPT_FILE` | No | Path to a custom chat system prompt file — overrides the classpath default |
 | `OCR_PROMPT_FILE` | No | Path to a custom OCR correction prompt file — overrides the classpath default |
+| **Auth (Zitadel)** | | |
+| `ZITADEL_ISSUER_URI` | Only in non-dev mode | Zitadel OIDC issuer URL — e.g. `https://<instance>.zitadel.cloud` |
+| `ZITADEL_CLIENT_ID` | Only in non-dev mode | Client ID of the `papyrus-web` PKCE app (browser login) |
+| `ZITADEL_PROJECT_ID` | Only in non-dev mode | Zitadel project resource ID — used to locate the roles claim |
+| `ZITADEL_INTROSPECTION_URI` | MCP only | `https://<instance>.zitadel.cloud/oauth/v2/introspect` — validates PATs |
+| `ZITADEL_INTROSPECTION_CLIENT_ID` | MCP only | Client ID of the `papyrus-introspect` API app |
+| `ZITADEL_INTROSPECTION_CLIENT_SECRET` | MCP only | Client secret of the `papyrus-introspect` API app |
 | **Other** | | |
 | `TESSDATA_PREFIX` | No | Tesseract data path (Alpine Docker: `/usr/share/tessdata`) |
 
@@ -216,25 +224,78 @@ MCP_PORT=8082
 # EVOLINK_API_KEY=sk-evo-...
 # EVOLINK_BASE_URL=https://direct.evolink.ai
 # CHAT_EVOLINK_MODEL=evolink/auto
+
+# Auth — Zitadel (required in non-dev mode; omit to disable security)
+ZITADEL_ISSUER_URI=https://<instance>.zitadel.cloud
+ZITADEL_CLIENT_ID=                        # papyrus-web PKCE app
+ZITADEL_PROJECT_ID=                       # Papyrus project resource ID
+ZITADEL_INTROSPECTION_URI=https://<instance>.zitadel.cloud/oauth/v2/introspect
+ZITADEL_INTROSPECTION_CLIENT_ID=          # papyrus-introspect API app
+ZITADEL_INTROSPECTION_CLIENT_SECRET=
 ```
 
 ### Production / Staging
 
 The production stack is managed at `/opt/yard/papyrus/docker-compose.yml` and pulls pre-built images from the registry. The pgvector instance runs as a separate service at `/opt/yard/pgvector/docker-compose.yml` publishing the `papyrus-db` network.
 
+## Authentication
+
+Papyrus uses **Zitadel** as its identity provider. Security is active in all Spring profiles except `dev`.
+
+### Roles
+
+| Role | Access |
+|------|--------|
+| `READER` | Search, chat, view documents (default when no role assigned) |
+| `CONTRIBUTOR` | + ingest documents and URLs |
+| `ADMIN` | + delete sources, re-ingest, access `/manage` |
+
+### papyrus-api (browser)
+
+Browser requests use OAuth2 Login — unauthenticated users are redirected to Zitadel. Roles are extracted from the OIDC ID token. Pages enforce URL-level access: `/ingest` requires CONTRIBUTOR+, `/manage` requires ADMIN; unauthorized access redirects to `/chat`.
+
+### papyrus-api (REST clients)
+
+API endpoints under `/api/**` require a Bearer JWT in the `Authorization` header. The JWT must be issued by the configured Zitadel instance.
+
+### papyrus-mcp (MCP clients)
+
+The MCP server validates tokens via **opaque token introspection** — Zitadel PATs (Personal Access Tokens) are supported. Configure Claude Code:
+
+```json
+{
+  "mcpServers": {
+    "papyrus": {
+      "type": "http",
+      "url": "https://mcp-papyrus.example.com/mcp",
+      "headers": { "Authorization": "Bearer <your-PAT>" }
+    }
+  }
+}
+```
+
+Create a service user in Zitadel (Bearer access token type), generate a PAT, and optionally assign a project role. Users with no role default to `READER`.
+
+### Local development
+
+Start with `SPRING_PROFILES_ACTIVE=dev` to bypass all security (permit-all).
+
+---
+
 ## REST API
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/documents` | Ingest a file (multipart) |
-| `POST` | `/api/documents/url` | Ingest from a URL |
-| `POST` | `/api/documents/batch` | Batch ingest (multipart, multiple files) |
-| `POST` | `/api/documents/preview` | Extract text without storing |
-| `GET` | `/api/documents` | List all sources |
-| `GET` | `/api/documents/{id}` | Get source by ID |
-| `DELETE` | `/api/documents/{id}` | Delete source and its chunks |
-| `POST` | `/api/search` | Semantic search |
-| `GET` | `/api/jobs/{id}` | Batch job status |
+| Method | Endpoint | Role required | Description |
+|---|---|---|---|
+| `POST` | `/api/documents` | CONTRIBUTOR+ | Ingest a file (multipart) |
+| `POST` | `/api/documents/url` | CONTRIBUTOR+ | Ingest from a URL |
+| `POST` | `/api/documents/batch` | CONTRIBUTOR+ | Batch ingest (multipart, multiple files) |
+| `POST` | `/api/documents/preview` | CONTRIBUTOR+ | Extract text without storing |
+| `GET` | `/api/documents` | READER | List all sources |
+| `GET` | `/api/documents/{id}` | READER | Get source by ID |
+| `DELETE` | `/api/documents/{id}` | ADMIN | Delete source and its chunks |
+| `POST` | `/api/search` | READER | Semantic search |
+| `GET` | `/api/jobs/{id}` | READER | Batch job status |
+| `GET` | `/api/me` | authenticated | Current user name and roles |
 
 **Search request:**
 ```json
@@ -245,25 +306,28 @@ The production stack is managed at `/opt/yard/papyrus/docker-compose.yml` and pu
 
 The MCP server runs separately from the REST API and connects to the same database. It exposes 6 tools via Streamable HTTP transport (MCP spec 2025-03-26):
 
-| Tool | Description |
-|---|---|
-| `ingest_document` | Ingest a document file (base64-encoded) |
-| `ingest_url` | Ingest from a URL |
-| `search` | Semantic search over ingested documents |
-| `list_sources` | List all ingested sources |
-| `get_document` | Retrieve a document by ID |
-| `delete_source` | Delete a source and its chunks |
+| Tool | Role required | Description |
+|---|---|---|
+| `ingest_document` | CONTRIBUTOR+ | Ingest a document file (base64-encoded) |
+| `ingest_url` | CONTRIBUTOR+ | Ingest from a URL |
+| `search` | READER | Semantic search over ingested documents |
+| `list_sources` | READER | List all ingested sources |
+| `get_document` | READER | Retrieve a document by ID |
+| `delete_source` | ADMIN | Delete a source and its chunks |
 
 **Endpoint:** `POST /mcp` (single endpoint handles all JSON-RPC messages)
 
-**Claude Code — global (available in all projects):**
-```bash
-claude mcp add --transport http --scope user papyrus http://localhost:8082/mcp
-```
-
-**Claude Code — project scope (team-shared via `.mcp.json`):**
-```bash
-claude mcp add --transport http --scope project papyrus http://localhost:8082/mcp
+**Claude Code** — add with a Bearer token (edit `~/.claude.json` directly):
+```json
+{
+  "mcpServers": {
+    "papyrus": {
+      "type": "http",
+      "url": "https://mcp-papyrus.example.com/mcp",
+      "headers": { "Authorization": "Bearer <your-PAT>" }
+    }
+  }
+}
 ```
 
 **claude.ai browser / Claude mobile:**
@@ -283,11 +347,12 @@ Embeddings are 512-dimensional for `voyage-3-lite` (default). Other Voyage model
 
 Served by `papyrus-api` at `/`:
 
-| Page | URL | Description |
-|---|---|---|
-| Chat | `/` or `/chat` | AI chat over ingested documents with source citations |
-| Ingest | `/ingest` | Upload documents; 3-step image flow with OCR preview |
-| Documents | `/documents` | List, filter, and delete ingested documents |
+| Page | URL | Role required | Description |
+|---|---|---|---|
+| Chat | `/` or `/chat` | READER | AI chat over ingested documents with source citations |
+| Ingest | `/ingest` | CONTRIBUTOR+ | Upload documents; 3-step image flow with OCR preview |
+| Documents | `/documents` | READER | List, filter, and delete ingested documents |
+| Manage | `/manage` | ADMIN | Archive manager — re-ingest with current embedding model |
 
 ## License
 
