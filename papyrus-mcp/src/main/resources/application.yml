@@ -86,3 +86,7 @@ papyrus:
   mcp:
     base-url: ${MCP_BASE_URL:https://mcp-papyrus.darqlab.net}
     public-url: ${MCP_PUBLIC_URL:https://mcp-papyrus.darqlab.net/mcp}
+
+zitadel:
+  issuer-uri: ${ZITADEL_ISSUER_URI:}
+  project-id: ${ZITADEL_PROJECT_ID:}

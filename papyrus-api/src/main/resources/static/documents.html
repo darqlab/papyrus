@@ -176,9 +176,17 @@
       <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2zm2 .5v2a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 0-.5-.5h-7a.5.5 0 0 0-.5.5zm0 4a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1H4zm0 2a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1H4zm0 2a.5.5 0 0 0 0 1h4a.5.5 0 0 0 0-1H4z"/></svg>
       <span>Chat</span>
     </a>
-    <a href="/ingest" class="active">
+    <a href="/ingest" data-role="contributor">
       <svg viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
       <span>Ingest</span>
+    </a>
+    <a href="/documents" class="active">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M5 10.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/><path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2zm0 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3z"/></svg>
+      <span>Documents</span>
+    </a>
+    <a href="/manage" data-role="admin">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      <span>Manage</span>
     </a>
   </nav>
   <div id="sidebar-footer">
@@ -339,7 +347,21 @@
     checkHealth();
     setInterval(checkHealth, 60_000);
     updateThemeIcon();
+    applyNavRoles();
   });
+
+  async function applyNavRoles() {
+    try {
+      const r = await fetch('/api/me');
+      if (!r.ok) return;
+      const me = await r.json();
+      const roles = me.roles || [];
+      const isAdmin   = roles.includes('ADMIN');
+      const canIngest = isAdmin || roles.includes('CONTRIBUTOR');
+      if (!canIngest) document.querySelectorAll('[data-role="contributor"]').forEach(el => el.style.display = 'none');
+      if (!isAdmin)   document.querySelectorAll('[data-role="admin"]').forEach(el => el.style.display = 'none');
+    } catch(e) {}
+  }
 </script>
 </body>
 </html>

@@ -1,0 +1,2 @@
+# Local dev: security is disabled via DevSecurityConfig (all requests permitted).
+# Activate with: SPRING_PROFILES_ACTIVE=dev
