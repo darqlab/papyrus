@@ -61,6 +61,7 @@ All docs live in `/home/dennis/devops/projects/papyrus/docs/`.
 | `CHECKPOINT_2026-04-15.md` | 2026-04-15 | MCP Streamable HTTP transport; Spring Boot 3.5 + Spring AI 1.1 upgrade |
 | `CHECKPOINT_2026-04-27.md` | 2026-04-27 | Evolink chat provider, configurable OCR providers, external prompt files |
 | `CHECKPOINT_2026-05-06.md` | 2026-05-06 | Per-source chunking, duplicate detection, RBAC + User Management docs, domain → arqhive.systems |
+| `CHECKPOINT_2026-05-07.md` | 2026-05-07 | RBAC implemented (JWT + opaque token introspection), MCP PAT auth, Cloudflare forward-headers fix |
 
 ### Existing plan docs
 
@@ -277,9 +278,12 @@ Transport: **Streamable HTTP** (`spring.ai.mcp.server.protocol: STREAMABLE`), en
 | `CHUNKING_SEMANTIC_MIN_SENTENCES` | Minimum sentences before a semantic break (default: `3`) |
 | `CHUNKING_SECTION_PATTERN` | Regex for section header detection in SECTION strategy (default: `^\d{3}(\.\d{2,3})+\s+\S`) |
 | `CHUNKING_SECTION_MIN_TOKENS` | Minimum tokens before merging small sections (default: `50`) |
-| `ZITADEL_ISSUER_URI` | Zitadel OIDC issuer URL — `https://auth.arquitech.biz` (required in non-dev mode) |
+| `ZITADEL_ISSUER_URI` | Zitadel OIDC issuer URL — `https://auth-aws4tr.us1.zitadel.cloud` (required in non-dev mode) |
 | `ZITADEL_CLIENT_ID` | OAuth2 client ID for browser login (`papyrus-web` PKCE app in Zitadel) |
-| `ZITADEL_PROJECT_ID` | Zitadel project ID — used to locate the roles claim in JWTs |
+| `ZITADEL_PROJECT_ID` | Zitadel project ID — used to locate the roles claim in JWTs and introspection responses |
+| `ZITADEL_INTROSPECTION_URI` | `https://auth-aws4tr.us1.zitadel.cloud/oauth/v2/introspect` — MCP opaque token validation |
+| `ZITADEL_INTROSPECTION_CLIENT_ID` | Client ID of `papyrus-introspect` API app (Basic auth for introspection) |
+| `ZITADEL_INTROSPECTION_CLIENT_SECRET` | Client secret of `papyrus-introspect` API app |
 
 ## LLM & Embedding Model Selection
 
