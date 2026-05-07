@@ -439,5 +439,5 @@ Prevents re-ingestion of identical content by computing a SHA-256 hash of raw by
 | #10 | File size warning | ✅ Done — `fix/file-size-warning` |
 | — | Evolink AI chat provider | ✅ Done — `feat/evolink-chat-provider` |
 | — | Per-source chunking strategy | ✅ Done — `feat/per-source-chunking-strategy` |
-| — | Auth (API key / OAuth2) | Planned |
+| — | Application-level RBAC (Zitadel + Spring Security) | ✅ Done — `feat/rbac` (PR #54) |
 | — | Production hardening (rate limiting, observability) | Planned |
