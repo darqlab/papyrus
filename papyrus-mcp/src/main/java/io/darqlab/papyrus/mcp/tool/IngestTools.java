@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.darqlab.papyrus.mcp.service.IngestionOrchestrator;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import java.util.Base64;
@@ -21,6 +22,7 @@ public class IngestTools {
         this.objectMapper = objectMapper;
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','CONTRIBUTOR')")
     @Tool(name = "ingest_document",
           description = "Ingest a document into the Papyrus knowledge base. " +
                         "Supports PDF, DOCX, HTML, TXT, MD, and CSV. " +
@@ -53,6 +55,7 @@ public class IngestTools {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','CONTRIBUTOR')")
     @Tool(name = "ingest_url",
           description = "Fetch a web page by URL and ingest it into the Papyrus knowledge base.")
     public String ingestUrl(
@@ -77,6 +80,7 @@ public class IngestTools {
         }
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Tool(name = "delete_source",
           description = "Permanently delete an ingested document and all its chunks from the knowledge base.")
     public String deleteSource(

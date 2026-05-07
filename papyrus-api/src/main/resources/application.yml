@@ -71,9 +71,15 @@ spring:
 
 server:
   port: 8080
+  forward-headers-strategy: native
 
 management:
   endpoints:
     web:
       exposure:
         include: health
+
+zitadel:
+  issuer-uri: ${ZITADEL_ISSUER_URI:}
+  client-id: ${ZITADEL_CLIENT_ID:}
+  project-id: ${ZITADEL_PROJECT_ID:}
