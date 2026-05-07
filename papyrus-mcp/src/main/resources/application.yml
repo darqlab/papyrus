@@ -90,3 +90,6 @@ papyrus:
 zitadel:
   issuer-uri: ${ZITADEL_ISSUER_URI:}
   project-id: ${ZITADEL_PROJECT_ID:}
+  introspection-uri: ${ZITADEL_INTROSPECTION_URI:}
+  introspection-client-id: ${ZITADEL_INTROSPECTION_CLIENT_ID:}
+  introspection-client-secret: ${ZITADEL_INTROSPECTION_CLIENT_SECRET:}
