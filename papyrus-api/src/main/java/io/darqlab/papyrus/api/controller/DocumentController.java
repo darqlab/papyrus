@@ -10,6 +10,7 @@ import io.darqlab.papyrus.pipeline.job.IngestionJobService;
 import io.darqlab.papyrus.pipeline.store.VectorStoreService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -48,6 +49,7 @@ public class DocumentController {
      * Returns immediately with a jobId that can be polled via GET /api/jobs/{id}.
      * <p>POST /api/documents</p>
      */
+    @PreAuthorize("hasAnyRole('ADMIN','CONTRIBUTOR')")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<AsyncUploadResponse> upload(
             @RequestPart("file") MultipartFile file,
@@ -128,6 +130,7 @@ public class DocumentController {
      * Delete a document and all its chunks.
      * <p>DELETE /api/documents/{id}</p>
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         return documentService.delete(id)
@@ -139,6 +142,7 @@ public class DocumentController {
      * Extract text from a file without storing — for OCR preview/verification.
      * <p>POST /api/documents/preview</p>
      */
+    @PreAuthorize("hasAnyRole('ADMIN','CONTRIBUTOR')")
     @PostMapping(value = "/preview", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PreviewResponse> preview(
             @RequestPart("file") MultipartFile file) throws IOException {
@@ -156,6 +160,7 @@ public class DocumentController {
      * Ingest a document from a URL.
      * <p>POST /api/documents/url</p>
      */
+    @PreAuthorize("hasAnyRole('ADMIN','CONTRIBUTOR')")
     @PostMapping("/url")
     public ResponseEntity<UploadResponse> ingestUrl(@RequestBody UrlIngestRequest request) {
         if (request.url() == null || request.url().isBlank()) {
@@ -171,6 +176,7 @@ public class DocumentController {
      * Batch-ingest multiple files, tracked via an IngestionJob.
      * <p>POST /api/documents/batch</p>
      */
+    @PreAuthorize("hasAnyRole('ADMIN','CONTRIBUTOR')")
     @PostMapping(value = "/batch", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<BatchUploadResponse> batch(
             @RequestPart("files") List<MultipartFile> files,
@@ -255,6 +261,7 @@ public class DocumentController {
      * Creates a new source record; the original is preserved.
      * <p>POST /api/documents/{id}/reingest</p>
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/reingest")
     public ResponseEntity<AsyncUploadResponse> reingest(@PathVariable UUID id) {
         Source source = vectorStoreService.findById(id);

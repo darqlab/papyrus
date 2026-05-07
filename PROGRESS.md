@@ -433,8 +433,8 @@ Prevents re-ingestion of identical content by computing a SHA-256 hash of raw by
 | # | Scope | Status |
 |---|-------|--------|
 | #4 | Duplicate entry detection | ✅ Done — `feat/duplicate-detection` |
-| #5 | Edit OCR verification text | Planned |
-| #7 | Rename ingested image from content | Planned |
+| #5 | Edit OCR verification text | ✅ Done — editable textarea in verify step (`ingest.html`) |
+| #7 | Rename ingested image from content | ✅ Done — `suggestedFilename` from preview + editable filename input (`ingest.html`) |
 | — | Credit exhausted indicator (chat UI) | ✅ Done — `feat/credit-exhausted-indicator` |
 | #10 | File size warning | ✅ Done — `fix/file-size-warning` |
 | — | Evolink AI chat provider | ✅ Done — `feat/evolink-chat-provider` |
