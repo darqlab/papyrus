@@ -77,3 +77,8 @@ management:
     web:
       exposure:
         include: health
+
+zitadel:
+  issuer-uri: ${ZITADEL_ISSUER_URI:}
+  client-id: ${ZITADEL_CLIENT_ID:}
+  project-id: ${ZITADEL_PROJECT_ID:}

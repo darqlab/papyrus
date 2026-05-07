@@ -277,6 +277,9 @@ Transport: **Streamable HTTP** (`spring.ai.mcp.server.protocol: STREAMABLE`), en
 | `CHUNKING_SEMANTIC_MIN_SENTENCES` | Minimum sentences before a semantic break (default: `3`) |
 | `CHUNKING_SECTION_PATTERN` | Regex for section header detection in SECTION strategy (default: `^\d{3}(\.\d{2,3})+\s+\S`) |
 | `CHUNKING_SECTION_MIN_TOKENS` | Minimum tokens before merging small sections (default: `50`) |
+| `ZITADEL_ISSUER_URI` | Zitadel OIDC issuer URL — `https://auth.arquitech.biz` (required in non-dev mode) |
+| `ZITADEL_CLIENT_ID` | OAuth2 client ID for browser login (`papyrus-web` PKCE app in Zitadel) |
+| `ZITADEL_PROJECT_ID` | Zitadel project ID — used to locate the roles claim in JWTs |
 
 ## LLM & Embedding Model Selection
 
