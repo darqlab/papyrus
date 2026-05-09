@@ -428,6 +428,34 @@ Prevents re-ingestion of identical content by computing a SHA-256 hash of raw by
 
 ---
 
+## MCP Auth Cleanup ✅
+
+**Completed:** 2026-05-09
+
+Fixed correctness issues in the MCP server's OAuth discovery endpoints and removed dead code.
+
+### What was changed
+
+| File | Change |
+|------|--------|
+| `WellKnownController` | Deleted — was serving `/.well-known/oauth-authorization-server` with the wrong issuer (MCP server URL instead of Zitadel) |
+| `ZitadelRoleConverter` | Deleted — dead code; MCP uses opaque token introspection, not JWT decoding |
+| `OAuthController` | Added `/.well-known/oauth-protected-resource` (RFC 9728) with `authorization_servers` pointing to `zitadel.issuer-uri`; default URL updated to `papyrusmcp.arqhive.systems` |
+| `application.yml` (mcp) | Added `server.forward-headers-strategy: native` — trusts Cloudflare `X-Forwarded-Proto`/Host headers |
+
+### Test results
+
+| Test | Result |
+|------|--------|
+| Unauthenticated `POST /mcp` | ✅ 401 |
+| `/.well-known/oauth-authorization-server` | ✅ Returns Zitadel endpoints |
+| `/.well-known/oauth-protected-resource` | ✅ `authorization_servers: [zitadel-issuer]` |
+| MCP initialize → tools/list | ✅ All 6 tools |
+| `list_sources` tool call end-to-end | ✅ Returns real documents |
+| `mvn test` (papyrus-mcp) | ✅ 5/5 pass |
+
+---
+
 ## Pending
 
 | # | Scope | Status |
@@ -439,5 +467,7 @@ Prevents re-ingestion of identical content by computing a SHA-256 hash of raw by
 | #10 | File size warning | ✅ Done — `fix/file-size-warning` |
 | — | Evolink AI chat provider | ✅ Done — `feat/evolink-chat-provider` |
 | — | Per-source chunking strategy | ✅ Done — `feat/per-source-chunking-strategy` |
-| — | Application-level RBAC (Zitadel + Spring Security) | ✅ Done — `feat/rbac` (PR #54) |
+| — | Application-level RBAC (Zitadel + Spring Security) | ✅ Done — `feat/rbac` (PR #59) |
+| — | MCP auth cleanup (well-known endpoints, Cloudflare headers) | ✅ Done — `fix/mcp-auth-cleanup` (PR #62) |
+| — | User Management UI (`/admin/users`) | Planned |
 | — | Production hardening (rate limiting, observability) | Planned |
