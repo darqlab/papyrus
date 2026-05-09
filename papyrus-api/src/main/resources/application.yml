@@ -84,5 +84,4 @@ zitadel:
   client-id: ${ZITADEL_CLIENT_ID:}
   project-id: ${ZITADEL_PROJECT_ID:}
   mgmt:
-    client-id: ${ZITADEL_MGMT_CLIENT_ID:}
-    client-secret: ${ZITADEL_MGMT_CLIENT_SECRET:}
+    pat: ${ZITADEL_MGMT_PAT:}

@@ -49,14 +49,14 @@ public class AdminUserController {
     @PutMapping("/{userId}/role")
     public ResponseEntity<Void> changeRole(@PathVariable String userId,
                                            @RequestBody ChangeRoleRequest req) {
-        managementClient.changeRole(req.grantId(), req.role());
+        managementClient.changeRole(userId, req.grantId(), req.role());
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/{userId}")
     public ResponseEntity<Void> removeUser(@PathVariable String userId,
                                            @RequestParam String grantId) {
-        managementClient.removeUser(grantId);
+        managementClient.removeUser(userId, grantId);
         return ResponseEntity.noContent().build();
     }
 }

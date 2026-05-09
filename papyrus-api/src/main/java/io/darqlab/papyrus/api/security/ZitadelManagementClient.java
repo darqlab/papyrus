@@ -31,14 +31,16 @@ public class ZitadelManagementClient {
     @SuppressWarnings("unchecked")
     public List<ZitadelUser> listProjectUsers() {
         Map<String, Object> body = Map.of(
-                "projectId", projectId,
-                "queries",   List.of()
+                "queries", List.of(
+                        Map.of("projectIdQuery", Map.of("projectId", projectId))
+                )
         );
 
-        Map<String, Object> response = post("/management/v1/usergrants/_search", body);
+        Map<String, Object> response = post("/management/v1/users/grants/_search", body);
         List<Map<String, Object>> result = (List<Map<String, Object>>) response.getOrDefault("result", List.of());
 
         return result.stream()
+                .filter(g -> !"TYPE_MACHINE".equals(g.get("userType")))
                 .map(this::toZitadelUser)
                 .toList();
     }
@@ -66,25 +68,25 @@ public class ZitadelManagementClient {
             throw new IllegalStateException("Zitadel did not return a userId after user creation");
         }
 
-        // Step 2: grant project role
+        // Step 2: grant project role — path: /users/{userId}/grants
         Map<String, Object> grantBody = Map.of(
-                "userId",   userId,
-                "roleKeys", List.of(role)
+                "projectId", projectId,
+                "roleKeys",  List.of(role)
         );
-        post("/management/v1/usergrants", grantBody);
+        post("/management/v1/users/" + userId + "/grants", grantBody);
     }
 
     // ── Change role ───────────────────────────────────────────────────────────
 
-    public void changeRole(String grantId, String newRole) {
+    public void changeRole(String userId, String grantId, String newRole) {
         Map<String, Object> body = Map.of("roleKeys", List.of(newRole));
-        put("/management/v1/usergrants/" + grantId, body);
+        put("/management/v1/users/" + userId + "/grants/" + grantId, body);
     }
 
     // ── Remove (revoke grant only) ────────────────────────────────────────────
 
-    public void removeUser(String grantId) {
-        delete("/management/v1/usergrants/" + grantId);
+    public void removeUser(String userId, String grantId) {
+        delete("/management/v1/users/" + userId + "/grants/" + grantId);
     }
 
     // ── HTTP helpers ──────────────────────────────────────────────────────────
@@ -126,19 +128,17 @@ public class ZitadelManagementClient {
         String grantId     = (String) grant.get("id");
         String userId      = (String) grant.get("userId");
         String displayName = (String) grant.getOrDefault("displayName", "");
-        String email       = (String) grant.getOrDefault("userEmail", "");
+        String email       = (String) grant.getOrDefault("email", "");
 
-        List<String> roles = (List<String>) grant.getOrDefault("roles", List.of());
-        String role = roles.isEmpty() ? "READER" : roles.get(0).toUpperCase();
+        List<String> roleKeys = (List<String>) grant.getOrDefault("roleKeys", List.of());
+        String role = roleKeys.isEmpty() ? "READER" : roleKeys.get(0).toUpperCase();
 
-        // createdAt from grant details
         Instant createdAt = null;
         Map<String, Object> details = (Map<String, Object>) grant.get("details");
         if (details != null && details.get("creationDate") instanceof String s) {
             try { createdAt = Instant.parse(s); } catch (Exception ignored) {}
         }
 
-        // lastLogin requires a separate user fetch — read from annotation field if present
         Instant lastLogin = null;
         if (grant.get("lastLogin") instanceof String s) {
             try { lastLogin = Instant.parse(s); } catch (Exception ignored) {}
