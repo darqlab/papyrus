@@ -31,6 +31,7 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+  forward-headers-strategy: native
 
 papyrus:
   embedding:
@@ -84,8 +85,8 @@ papyrus:
   search:
     default-top-k: ${SEARCH_TOP_K:5}
   mcp:
-    base-url: ${MCP_BASE_URL:https://mcp-papyrus.darqlab.net}
-    public-url: ${MCP_PUBLIC_URL:https://mcp-papyrus.darqlab.net/mcp}
+    base-url: ${MCP_BASE_URL:https://papyrusmcp.arqhive.systems}
+    public-url: ${MCP_PUBLIC_URL:https://papyrusmcp.arqhive.systems/mcp}
 
 zitadel:
   issuer-uri: ${ZITADEL_ISSUER_URI:}
