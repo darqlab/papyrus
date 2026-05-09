@@ -118,7 +118,7 @@ class AdminUserControllerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void admin_changeRole_returns200() throws Exception {
-        doNothing().when(managementClient).changeRole(anyString(), anyString());
+        doNothing().when(managementClient).changeRole(anyString(), anyString(), anyString());
 
         mvc.perform(put("/api/admin/users/user-1/role")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -129,7 +129,7 @@ class AdminUserControllerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void admin_removeUser_returns204() throws Exception {
-        doNothing().when(managementClient).removeUser(anyString());
+        doNothing().when(managementClient).removeUser(anyString(), anyString());
 
         mvc.perform(delete("/api/admin/users/user-1").param("grantId", "grant-1"))
             .andExpect(status().isNoContent());
