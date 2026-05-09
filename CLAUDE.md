@@ -98,6 +98,7 @@ All docs live in `/home/dennis/devops/projects/papyrus/docs/`.
 | `Papyrus_UserManagement_IA.md` | User Management UI (admin adds/manages users via Zitadel API) — Issue Analysis |
 | `Papyrus_UserManagement_IP.md` | User Management UI — Implementation Plan |
 | `Papyrus_UserManagement_TM.md` | User Management UI — Task Management |
+| `Papyrus_ClaudeAI_MCP_Setup.md` | claude.ai connector setup — OAuth2 via Zitadel, PAT for Claude Code |
 
 ---
 
