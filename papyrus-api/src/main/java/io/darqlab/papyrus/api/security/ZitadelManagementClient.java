@@ -50,7 +50,9 @@ public class ZitadelManagementClient {
     @SuppressWarnings("unchecked")
     public void inviteUser(String firstName, String lastName, String email, String role) {
         // Step 1: create human user — Zitadel sends initialization email automatically
+        String userName = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
         Map<String, Object> createBody = Map.of(
+                "userName", userName,
                 "profile", Map.of(
                         "firstName",   firstName,
                         "lastName",    lastName,
