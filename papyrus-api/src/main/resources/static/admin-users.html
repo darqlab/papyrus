@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Papyrus — Users</title>
+  <script>
+    (function() {
+      const theme = localStorage.getItem('papyrus-theme') || 'dark';
+      if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    })();
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+
+    :root {
+      --bg: #f7f7f8; --surface: #ffffff; --border: #e5e7eb;
+      --text: #1a1a1a; --text-muted: #6b7280; --text-faint: #9ca3af;
+      --input-bg: #ffffff; --table-head: #f9fafb;
+    }
+    [data-theme="dark"] {
+      --bg: #0f0f13; --surface: #1c1c24; --border: #2e2e3a;
+      --text: #e8e8f0; --text-muted: #8888a8; --text-faint: #55556a;
+      --input-bg: #1c1c24; --table-head: #1a1a24;
+    }
+
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; }
+
+    /* ── Sidebar ─────────────────────────────────────────────────── */
+    #sidebar { width: 220px; flex-shrink: 0; background: #1a1a2e; display: flex; flex-direction: column; padding: 1.5rem 0 1rem; }
+    #sidebar .logo { font-size: 1.2rem; font-weight: 700; letter-spacing: .06em; color: #e0e0e0; padding: 0 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,.08); }
+    #sidebar nav { display: flex; flex-direction: column; gap: .25rem; padding: 1rem .75rem; flex: 1; }
+    #sidebar nav a { display: flex; align-items: center; gap: .65rem; color: #a0a0c0; text-decoration: none; font-size: .92rem; padding: .55rem .85rem; border-radius: 8px; transition: background .15s, color .15s; }
+    #sidebar nav a:hover { background: rgba(255,255,255,.08); color: #fff; }
+    #sidebar nav a.active { background: rgba(255,255,255,.14); color: #fff; font-weight: 600; }
+    #sidebar nav a svg { width: 16px; height: 16px; flex-shrink: 0; opacity: .85; }
+    #sidebar-footer { padding: 1rem 1.25rem .5rem; border-top: 1px solid rgba(255,255,255,.08); display: flex; align-items: center; gap: .55rem; }
+    .health-dot { width: 8px; height: 8px; border-radius: 50%; background: #6b7280; transition: background .4s; }
+    .health-dot.health-ok { background: #22c55e; }
+    .health-dot.health-err { background: #ef4444; }
+    #health-label { font-size: .75rem; color: #6b7280; }
+
+    /* ── Main ────────────────────────────────────────────────────── */
+    #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    main { flex: 1; overflow-y: auto; padding: 2rem; }
+
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.75rem; }
+    .page-header h1 { font-size: 1.35rem; font-weight: 700; }
+
+    /* ── Invite form ─────────────────────────────────────────────── */
+    #invite-panel { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; }
+    #invite-panel.open { display: block; }
+    #invite-panel h3 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
+    .invite-row { display: flex; gap: .75rem; flex-wrap: wrap; align-items: flex-end; }
+    .invite-row label { display: flex; flex-direction: column; gap: .3rem; font-size: .82rem; color: var(--text-muted); }
+    .invite-row input, .invite-row select {
+      background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: .45rem .7rem; font-size: .9rem; color: var(--text); outline: none;
+      min-width: 160px;
+    }
+    .invite-row input:focus, .invite-row select:focus { border-color: #4361ee; }
+    .invite-actions { display: flex; gap: .5rem; margin-top: .5rem; }
+
+    /* ── Buttons ─────────────────────────────────────────────────── */
+    .btn { padding: .45rem 1rem; border-radius: 7px; border: none; font-size: .88rem; font-weight: 500; cursor: pointer; transition: opacity .15s; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-primary { background: #4361ee; color: #fff; }
+    .btn-primary:hover:not(:disabled) { opacity: .88; }
+    .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { color: var(--text); }
+    .btn-danger { background: #ef4444; color: #fff; }
+    .btn-danger:hover:not(:disabled) { opacity: .88; }
+    .btn-sm { padding: .3rem .75rem; font-size: .82rem; }
+
+    /* ── Table ───────────────────────────────────────────────────── */
+    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: var(--table-head); }
+    th { padding: .7rem 1rem; text-align: left; font-size: .8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--border); }
+    td { padding: .75rem 1rem; font-size: .9rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(0,0,0,.02); }
+    [data-theme="dark"] tr:hover td { background: rgba(255,255,255,.025); }
+
+    /* ── Role badges ─────────────────────────────────────────────── */
+    .badge { display: inline-block; padding: .18rem .55rem; border-radius: 5px; font-size: .76rem; font-weight: 600; letter-spacing: .03em; }
+    .badge-admin       { background: #fee2e2; color: #b91c1c; }
+    .badge-contributor { background: #dbeafe; color: #1d4ed8; }
+    .badge-reader      { background: #dcfce7; color: #15803d; }
+    [data-theme="dark"] .badge-admin       { background: #450a0a; color: #fca5a5; }
+    [data-theme="dark"] .badge-contributor { background: #1e3a5f; color: #93c5fd; }
+    [data-theme="dark"] .badge-reader      { background: #052e16; color: #86efac; }
+
+    /* ── Role select inline ──────────────────────────────────────── */
+    .role-select { background: var(--input-bg); border: 1px solid var(--border); border-radius: 5px; padding: .2rem .4rem; font-size: .85rem; color: var(--text); cursor: pointer; }
+
+    /* ── Actions ─────────────────────────────────────────────────── */
+    .action-cell { display: flex; gap: .4rem; align-items: center; }
+
+    /* ── Empty / loading ─────────────────────────────────────────── */
+    .empty { text-align: center; padding: 3rem; color: var(--text-muted); font-size: .95rem; }
+
+    /* ── Error banner ────────────────────────────────────────────── */
+    #error-banner { display: none; background: #fee2e2; color: #b91c1c; border-radius: 8px; padding: .7rem 1rem; margin-bottom: 1rem; font-size: .9rem; }
+    [data-theme="dark"] #error-banner { background: #450a0a; color: #fca5a5; }
+
+    /* ── Confirm modal ───────────────────────────────────────────── */
+    #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; align-items: center; justify-content: center; }
+    #modal-overlay.open { display: flex; }
+    #modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; max-width: 400px; width: 90%; }
+    #modal h3 { font-size: 1rem; font-weight: 600; margin-bottom: .6rem; }
+    #modal p { font-size: .9rem; color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.5; }
+    #modal-actions { display: flex; gap: .5rem; justify-content: flex-end; }
+
+    @media (max-width: 640px) {
+      #sidebar { width: 56px; }
+      #sidebar nav a span, #health-label { display: none; }
+      #sidebar nav a { justify-content: center; padding: .6rem; }
+      #sidebar .logo { padding: 0 .75rem 1.5rem; font-size: .1rem; overflow: hidden; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Sidebar ─────────────────────────────────────────────────────── -->
+<aside id="sidebar">
+  <div class="logo">Papyrus</div>
+  <nav>
+    <a href="/chat">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2zm2 .5v2a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 0-.5-.5h-7a.5.5 0 0 0-.5.5zm0 4a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1H4zm0 2a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1H4zm0 2a.5.5 0 0 0 0 1h4a.5.5 0 0 0 0-1H4z"/></svg>
+      <span>Chat</span>
+    </a>
+    <a href="/ingest" data-role="contributor">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
+      <span>Ingest</span>
+    </a>
+    <a href="/documents">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M5 10.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/><path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2zm0 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3z"/></svg>
+      <span>Documents</span>
+    </a>
+    <a href="/manage" data-role="admin">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      <span>Manage</span>
+    </a>
+    <a href="/admin/users" class="active" data-role="admin">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7Zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5.784 6A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216ZM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>
+      <span>Users</span>
+    </a>
+  </nav>
+  <div id="sidebar-footer">
+    <button id="theme-toggle" style="background:none;border:none;color:#a0a0c0;font-size:1.1rem;cursor:pointer;padding:.4rem;margin-right:auto" title="Toggle dark mode">
+      <span id="theme-icon">☀️</span>
+    </button>
+    <div class="health-dot" id="health-dot"></div>
+    <span id="health-label">Connecting…</span>
+  </div>
+</aside>
+
+<!-- ── Main ─────────────────────────────────────────────────────────── -->
+<div id="main">
+<main>
+
+  <div class="page-header">
+    <h1>User Management</h1>
+    <button class="btn btn-primary" onclick="toggleInvite()">+ Invite User</button>
+  </div>
+
+  <!-- Invite panel -->
+  <div id="invite-panel">
+    <h3>Invite New User</h3>
+    <div class="invite-row">
+      <label>First Name <input id="inv-first" type="text" placeholder="Jane"></label>
+      <label>Last Name  <input id="inv-last"  type="text" placeholder="Doe"></label>
+      <label>Email      <input id="inv-email" type="email" placeholder="jane@example.com"></label>
+      <label>Role
+        <select id="inv-role">
+          <option value="READER">Reader</option>
+          <option value="CONTRIBUTOR">Contributor</option>
+          <option value="ADMIN">Admin</option>
+        </select>
+      </label>
+    </div>
+    <div class="invite-actions">
+      <button class="btn btn-primary btn-sm" id="inv-submit" onclick="submitInvite()">Send Invite</button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleInvite()">Cancel</button>
+    </div>
+  </div>
+
+  <div id="error-banner"></div>
+
+  <!-- Users table -->
+  <div class="table-wrap">
+    <table id="users-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Created</th>
+          <th>Last Login</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="users-tbody">
+        <tr><td colspan="6" class="empty">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</main>
+</div>
+
+<!-- ── Confirm modal ─────────────────────────────────────────────────── -->
+<div id="modal-overlay">
+  <div id="modal">
+    <h3 id="modal-title">Remove access?</h3>
+    <p id="modal-body"></p>
+    <div id="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger btn-sm" id="modal-confirm">Remove</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────
+let users = [];
+
+// ── Init ───────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  applyTheme();
+  checkRole();
+  loadUsers();
+  healthCheck();
+  document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+});
+
+// ── Theme ──────────────────────────────────────────────────────────────
+function applyTheme() {
+  const t = localStorage.getItem('papyrus-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('theme-icon').textContent = t === 'dark' ? '☀️' : '🌙';
+}
+function toggleTheme() {
+  const cur = localStorage.getItem('papyrus-theme') || 'dark';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('papyrus-theme', next);
+  applyTheme();
+}
+
+// ── Role guard ─────────────────────────────────────────────────────────
+async function checkRole() {
+  try {
+    const r = await fetch('/api/me');
+    if (!r.ok) { location.href = '/chat'; return; }
+    const me = await r.json();
+    const roles = me.roles || [];
+    const isAdmin = roles.includes('ADMIN');
+    if (!isAdmin) { location.href = '/chat'; return; }
+    document.querySelectorAll('[data-role="contributor"]').forEach(el => {
+      if (!roles.includes('CONTRIBUTOR')) el.style.display = 'none';
+    });
+  } catch(e) {}
+}
+
+// ── Load users ─────────────────────────────────────────────────────────
+async function loadUsers() {
+  const tbody = document.getElementById('users-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" class="empty">Loading…</td></tr>';
+  try {
+    const r = await fetch('/api/admin/users');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    users = await r.json();
+    renderTable();
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">Failed to load users.</td></tr>';
+    showError('Could not load users: ' + e.message);
+  }
+}
+
+function renderTable() {
+  const tbody = document.getElementById('users-tbody');
+  if (!users.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">No users found.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = users.map(u => `
+    <tr data-user-id="${u.userId}" data-grant-id="${u.grantId}">
+      <td>${esc(u.displayName || '—')}</td>
+      <td>${esc(u.email || '—')}</td>
+      <td>
+        <select class="role-select" onchange="changeRole('${u.userId}','${u.grantId}',this.value)" title="Change role">
+          ${['READER','CONTRIBUTOR','ADMIN'].map(r =>
+            `<option value="${r}" ${u.role === r ? 'selected' : ''}>${r[0] + r.slice(1).toLowerCase()}</option>`
+          ).join('')}
+        </select>
+        <span class="badge badge-${u.role.toLowerCase()}">${u.role}</span>
+      </td>
+      <td>${fmtDate(u.createdAt)}</td>
+      <td>${fmtDate(u.lastLogin)}</td>
+      <td>
+        <div class="action-cell">
+          <button class="btn btn-ghost btn-sm" onclick="confirmRemove('${u.userId}','${u.grantId}','${esc(u.displayName || u.email)}')">Remove</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+
+  // hide badge when select is shown (select is shown only when js works)
+  document.querySelectorAll('.badge').forEach(b => b.style.display = 'none');
+}
+
+// ── Role change ────────────────────────────────────────────────────────
+async function changeRole(userId, grantId, newRole) {
+  hideError();
+  try {
+    const r = await fetch(`/api/admin/users/${userId}/role`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ grantId, role: newRole })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    // update local state
+    const u = users.find(u => u.userId === userId);
+    if (u) u.role = newRole;
+  } catch(e) {
+    showError('Failed to change role: ' + e.message);
+    loadUsers();
+  }
+}
+
+// ── Invite ─────────────────────────────────────────────────────────────
+function toggleInvite() {
+  const panel = document.getElementById('invite-panel');
+  panel.classList.toggle('open');
+  if (panel.classList.contains('open')) {
+    document.getElementById('inv-first').focus();
+  }
+}
+
+async function submitInvite() {
+  const firstName = document.getElementById('inv-first').value.trim();
+  const lastName  = document.getElementById('inv-last').value.trim();
+  const email     = document.getElementById('inv-email').value.trim();
+  const role      = document.getElementById('inv-role').value;
+
+  if (!firstName || !lastName || !email) {
+    showError('All fields are required.'); return;
+  }
+
+  const btn = document.getElementById('inv-submit');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  hideError();
+
+  try {
+    const r = await fetch('/api/admin/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName, lastName, email, role })
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.error || 'HTTP ' + r.status);
+    }
+    document.getElementById('inv-first').value = '';
+    document.getElementById('inv-last').value  = '';
+    document.getElementById('inv-email').value = '';
+    document.getElementById('invite-panel').classList.remove('open');
+    await loadUsers();
+  } catch(e) {
+    showError('Invite failed: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Send Invite';
+  }
+}
+
+// ── Remove ─────────────────────────────────────────────────────────────
+let pendingRemove = null;
+
+function confirmRemove(userId, grantId, name) {
+  pendingRemove = { userId, grantId };
+  document.getElementById('modal-body').textContent =
+    `Remove access for ${name}? Their Zitadel account will not be deleted.`;
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('modal-confirm').onclick = doRemove;
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  pendingRemove = null;
+}
+
+async function doRemove() {
+  if (!pendingRemove) return;
+  const { userId, grantId } = pendingRemove;
+  closeModal();
+  hideError();
+  try {
+    const r = await fetch(`/api/admin/users/${userId}?grantId=${encodeURIComponent(grantId)}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    await loadUsers();
+  } catch(e) {
+    showError('Remove failed: ' + e.message);
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtDate(iso) {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' }); }
+  catch(e) { return '—'; }
+}
+function showError(msg) {
+  const b = document.getElementById('error-banner');
+  b.textContent = msg; b.style.display = 'block';
+}
+function hideError() { document.getElementById('error-banner').style.display = 'none'; }
+
+async function healthCheck() {
+  try {
+    const r = await fetch('/actuator/health');
+    const dot = document.getElementById('health-dot');
+    const lbl = document.getElementById('health-label');
+    if (r.ok) { dot.className = 'health-dot health-ok'; lbl.textContent = 'Online'; }
+    else       { dot.className = 'health-dot health-err'; lbl.textContent = 'Error'; }
+  } catch(e) {
+    document.getElementById('health-dot').className = 'health-dot health-err';
+    document.getElementById('health-label').textContent = 'Offline';
+  }
+}
+</script>
+</body>
+</html>
