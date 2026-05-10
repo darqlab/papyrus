@@ -1,18 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"
+      layout:decorate="~{layout/default}"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Papyrus — Ingest</title>
-  <script>
-    (function() {
-      const theme = localStorage.getItem('papyrus-theme') || 'dark';
-      if (theme === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      }
-    })();
-  </script>
-  <style>
+  <style layout:fragment="head">
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
 
@@ -42,41 +35,6 @@
 
     body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: row; }
 
-    /* ── Sidebar ─────────────────────────────────────────────────── */
-    #sidebar {
-      width: 220px; flex-shrink: 0; background: #1a1a2e;
-      display: flex; flex-direction: column; padding: 1.5rem 0 1rem;
-    }
-    #sidebar .logo {
-      font-size: 1.2rem; font-weight: 700; letter-spacing: .06em;
-      color: #e0e0e0; padding: 0 1.25rem 1.5rem;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-    }
-    #sidebar nav {
-      display: flex; flex-direction: column; gap: .25rem;
-      padding: 1rem .75rem; flex: 1;
-    }
-    #sidebar nav a {
-      display: flex; align-items: center; gap: .65rem;
-      color: #a0a0c0; text-decoration: none; font-size: .92rem;
-      padding: .55rem .85rem; border-radius: 8px;
-      transition: background .15s, color .15s;
-    }
-    #sidebar nav a:hover { background: rgba(255,255,255,.08); color: #fff; }
-    #sidebar nav a.active { background: rgba(255,255,255,.14); color: #fff; font-weight: 600; }
-    #sidebar nav a svg { width: 16px; height: 16px; flex-shrink: 0; opacity: .85; }
-
-    /* ── Sidebar footer (health) ─────────────────────────────────── */
-    #sidebar-footer {
-      padding: 1rem 1.25rem .5rem;
-      border-top: 1px solid rgba(255,255,255,.08);
-      display: flex; align-items: center; gap: .55rem;
-    }
-    .health-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #6b7280; transition: background .4s; }
-    .health-dot.health-ok   { background: #22c55e; }
-    .health-dot.health-warn { background: #f59e0b; }
-    .health-dot.health-err  { background: #ef4444; }
-    #health-label { font-size: .75rem; color: #6b7280; }
 
     /* ── Main ────────────────────────────────────────────────────── */
     #main { flex: 1; overflow-y: auto; min-width: 0; position: relative; }
@@ -194,50 +152,12 @@
     #drag-overlay p { font-size: 1.1rem; font-weight: 600; color: #4361ee; }
 
     @media (max-width: 700px) { .compare-grid { grid-template-columns: 1fr; } }
-    @media (max-width: 600px) {
-      #sidebar { width: 60px; }
-      #sidebar .logo { font-size: 0; padding: 0 0 1rem; text-align: center; }
-      #sidebar .logo::after { content: 'P'; font-size: 1.2rem; }
-      #sidebar nav a span, #health-label { display: none; }
-      #sidebar nav a { justify-content: center; padding: .6rem; }
-    }
+
   </style>
 </head>
 <body>
 
-<!-- ── Sidebar ─────────────────────────────────────────────────────── -->
-<aside id="sidebar">
-  <div class="logo">Papyrus</div>
-  <nav>
-    <a href="/chat">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2zm2 .5v2a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 0-.5-.5h-7a.5.5 0 0 0-.5.5zm0 4a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1H4zm0 2a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1H4zm0 2a.5.5 0 0 0 0 1h4a.5.5 0 0 0 0-1H4z"/></svg>
-      <span>Chat</span>
-    </a>
-    <a href="/ingest" class="active" data-role="contributor">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
-      <span>Ingest</span>
-    </a>
-    <a href="/documents">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M5 10.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/><path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2zm0 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3z"/></svg>
-      <span>Documents</span>
-    </a>
-    <a href="/manage" data-role="admin">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-      <span>Manage</span>
-    </a>
-    <a href="/admin/users" data-role="admin">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7Zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5.784 6A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216ZM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>
-      <span>Users</span>
-    </a>
-  </nav>
-  <div id="sidebar-footer">
-    <button id="theme-toggle" style="background: none; border: none; color: #a0a0c0; font-size: 1.1rem; cursor: pointer; padding: 0.4rem; margin-right: auto;" title="Toggle dark mode">
-      <span id="theme-icon">☀️</span>
-    </button>
-    <div class="health-dot" id="health-dot"></div>
-    <span id="health-label">Connecting…</span>
-  </div>
-</aside>
+<th:block layout:fragment="content">
 
 <!-- ── Drag overlay ─────────────────────────────────────────────────── -->
 <div id="drag-overlay">
@@ -245,10 +165,7 @@
   <p>Drop file to ingest</p>
 </div>
 
-<!-- ── Main ─────────────────────────────────────────────────────────── -->
-<div id="main">
-
-  <main>
+<main>
 
     <!-- Upload -->
     <section>
@@ -343,9 +260,9 @@
     </section>
   </div>
 
-</div>
+</th:block>
 
-<script>
+<script layout:fragment="scripts">
   const api = '';
   const IMAGE_TYPES   = new Set(['image/png','image/jpeg','image/tiff','image/bmp','image/gif']);
   const PREVIEW_TYPES = new Set(['image/png','image/jpeg','image/tiff','image/bmp','image/gif','application/pdf']);
@@ -605,37 +522,6 @@
     }, 2000);
   }
 
-  // ── Health indicator ──────────────────────────────────────────────
-  async function checkHealth() {
-    const dot   = document.getElementById('health-dot');
-    const label = document.getElementById('health-label');
-    try {
-      const res  = await fetch('/actuator/health', { cache: 'no-store' });
-      const data = await res.json();
-      dot.className    = data.status === 'UP' ? 'health-dot health-ok' : 'health-dot health-warn';
-      label.textContent = data.status === 'UP' ? 'Online' : 'Degraded';
-    } catch {
-      dot.className = 'health-dot health-err'; label.textContent = 'Offline';
-    }
-  }
-
-  // ── Theme toggle ─────────────────────────────────────────────────
-  function updateThemeIcon() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const icon = document.getElementById('theme-icon');
-    if (icon) icon.textContent = isDark ? '☀️' : '🌙';
-  }
-
-  const themeToggle = document.getElementById('theme-toggle');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
-      localStorage.setItem('papyrus-theme', isDark ? 'light' : 'dark');
-      updateThemeIcon();
-    });
-  }
-
   // ── Helpers ───────────────────────────────────────────────────────
   function resetForm() {
     document.getElementById('file-input').value = '';
@@ -666,25 +552,6 @@
 
   function setStatus(el, msg, cls) { el.textContent = msg; el.className = 'status ' + cls; }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    checkHealth();
-    setInterval(checkHealth, 60_000);
-    updateThemeIcon();
-    applyNavRoles();
-  });
-
-  async function applyNavRoles() {
-    try {
-      const r = await fetch('/api/me');
-      if (!r.ok) return;
-      const me = await r.json();
-      const roles = me.roles || [];
-      const isAdmin   = roles.includes('ADMIN');
-      const canIngest = isAdmin || roles.includes('CONTRIBUTOR');
-      if (!canIngest) document.querySelectorAll('[data-role="contributor"]').forEach(el => el.style.display = 'none');
-      if (!isAdmin)   document.querySelectorAll('[data-role="admin"]').forEach(el => el.style.display = 'none');
-    } catch(e) {}
-  }
 </script>
 </body>
 </html>

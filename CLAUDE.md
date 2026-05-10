@@ -62,7 +62,7 @@ All docs live in `/home/dennis/devops/projects/papyrus/docs/`.
 | `CHECKPOINT_2026-04-27.md` | 2026-04-27 | Evolink chat provider, configurable OCR providers, external prompt files |
 | `CHECKPOINT_2026-05-06.md` | 2026-05-06 | Per-source chunking, duplicate detection, RBAC + User Management docs, domain → arqhive.systems |
 | `CHECKPOINT_2026-05-07.md` | 2026-05-07 | RBAC implemented (JWT + opaque token introspection), MCP PAT auth, Cloudflare forward-headers fix |
-| `CHECKPOINT_2026-05-09.md` | 2026-05-09 | MCP auth cleanup — well-known endpoints fixed (RFC 9728 added), dead code removed, Cloudflare headers for MCP |
+| `CHECKPOINT_2026-05-09.md` | 2026-05-09 | MCP auth cleanup — well-known endpoints fixed (RFC 9728 added), dead code removed, Cloudflare headers for MCP; User Management UI — Zitadel Management API integration, admin panel live on staging |
 
 ### Existing plan docs
 
@@ -99,6 +99,7 @@ All docs live in `/home/dennis/devops/projects/papyrus/docs/`.
 | `Papyrus_UserManagement_IA.md` | User Management UI (admin adds/manages users via Zitadel API) — Issue Analysis |
 | `Papyrus_UserManagement_IP.md` | User Management UI — Implementation Plan |
 | `Papyrus_UserManagement_TM.md` | User Management UI — Task Management |
+| `Papyrus_UserManagement_TDD.md` | User Management UI — Technical Design Document (✅ complete) |
 | `Papyrus_ClaudeAI_MCP_Setup.md` | claude.ai connector setup — OAuth2 via Zitadel, PAT for Claude Code |
 
 ---

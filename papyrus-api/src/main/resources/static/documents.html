@@ -81,26 +81,6 @@
     /* ── Main ────────────────────────────────────────────────────── */
     #main { flex: 1; overflow-y: auto; min-width: 0; }
 
-    /* ── Sub-navigation ──────────────────────────────────────────── */
-    #subnav {
-      display: flex; gap: 0;
-      border-bottom: 2px solid var(--border);
-      background: var(--surface);
-      padding: 0 2rem;
-    }
-    #subnav a {
-      display: flex; align-items: center; gap: .5rem;
-      padding: .85rem 1.25rem;
-      font-size: .9rem; font-weight: 500;
-      color: var(--text-muted); text-decoration: none;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -2px;
-      transition: color .15s, border-color .15s;
-    }
-    #subnav a:hover { color: #4361ee; }
-    #subnav a.active { color: #4361ee; border-bottom-color: #4361ee; font-weight: 600; }
-    #subnav a svg { width: 15px; height: 15px; opacity: .85; }
-
     /* ── Content ─────────────────────────────────────────────────── */
     main { max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; }
 
@@ -162,7 +142,6 @@
       #sidebar .logo::after { content: 'P'; font-size: 1.2rem; }
       #sidebar nav a span, #health-label { display: none; }
       #sidebar nav a { justify-content: center; padding: .6rem; }
-      #subnav { padding: 0 1rem; }
     }
   </style>
 </head>
@@ -204,18 +183,6 @@
 
 <!-- ── Main ─────────────────────────────────────────────────────────── -->
 <div id="main">
-
-  <!-- Sub-navigation -->
-  <div id="subnav">
-    <a href="/ingest">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
-      Upload
-    </a>
-    <a href="/documents" class="active">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M5 10.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/><path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2zm0 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3z"/></svg>
-      Documents
-    </a>
-  </div>
 
   <main>
     <section>

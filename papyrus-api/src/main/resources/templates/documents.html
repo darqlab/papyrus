@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en"
+      layout:decorate="~{layout/default}"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Papyrus — Documents</title>
+  <style layout:fragment="head">
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+
+    :root {
+      --bg: #f7f7f8;
+      --surface: #ffffff;
+      --border: #e5e7eb;
+      --text: #1a1a1a;
+      --text-muted: #6b7280;
+      --text-faint: #9ca3af;
+      --code-bg: #f3f4f6;
+      --table-head: #f9fafb;
+      --input-bg: #ffffff;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0f0f13;
+      --surface: #1c1c24;
+      --border: #2e2e3a;
+      --text: #e8e8f0;
+      --text-muted: #8888a8;
+      --text-faint: #55556a;
+      --code-bg: #1a1a24;
+      --table-head: #1a1a24;
+      --input-bg: #1c1c24;
+    }
+
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: row; }
+
+
+    /* ── Main ────────────────────────────────────────────────────── */
+    #main { flex: 1; overflow-y: auto; min-width: 0; }
+
+    /* ── Content ─────────────────────────────────────────────────── */
+    main { max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; }
+
+    section {
+      background: var(--surface); border-radius: 8px; padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1rem; flex-wrap: wrap; gap: .5rem;
+    }
+    .section-header h2 { font-size: 1rem; font-weight: 600; color: var(--text); }
+
+    button {
+      background: #4361ee; color: #fff; border: none; border-radius: 6px;
+      padding: .5rem 1.2rem; font-size: .9rem; cursor: pointer; transition: background .15s;
+    }
+    button:hover { background: #3451d1; }
+    button:disabled { background: #a0aec0; cursor: not-allowed; }
+    .btn-sm { font-size: .8rem; padding: .3rem .75rem; }
+    .btn-danger { background: #dc2626; }
+    .btn-danger:hover { background: #b91c1c; }
+
+    /* Filter row */
+    .docs-filter {
+      display: flex; gap: .5rem; margin-bottom: .75rem; align-items: center;
+    }
+    .docs-filter input[type=search] {
+      flex: 1; padding: .4rem .7rem; border: 1px solid var(--border);
+      border-radius: 6px; font-size: .875rem; outline: none; transition: border-color .15s;
+      background: var(--input-bg); color: var(--text);
+    }
+    .docs-filter input[type=search]:focus { border-color: #4361ee; }
+    .docs-filter select {
+      padding: .4rem .6rem; border: 1px solid var(--border);
+      border-radius: 6px; font-size: .875rem; outline: none; transition: border-color .15s;
+      background: var(--input-bg); color: var(--text);
+    }
+    .docs-filter select:focus { border-color: #4361ee; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+    th { text-align: left; padding: .55rem .75rem; background: var(--table-head); font-weight: 600; border-bottom: 2px solid var(--border); color: var(--text-muted); }
+    td { padding: .55rem .75rem; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--text); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--code-bg); }
+
+    .badge { display: inline-block; padding: .2em .6em; border-radius: 4px; font-size: .75rem; font-weight: 600; }
+    .badge-done   { background: #d1fae5; color: #065f46; }
+    .badge-failed { background: #fee2e2; color: #991b1b; }
+    .badge-other  { background: #e0e7ff; color: #3730a3; }
+
+    .empty { color: var(--text-faint); font-size: .875rem; padding: .75rem 0; }
+
+
+  </style>
+</head>
+<body>
+
+<th:block layout:fragment="content">
+<main>
+    <section>
+      <div class="section-header">
+        <h2>Ingested Documents</h2>
+        <button class="btn-sm" onclick="loadDocs()">Refresh</button>
+      </div>
+      <div class="docs-filter">
+        <input type="search" id="filter-name" placeholder="Search by filename…" oninput="filterDocs()">
+        <select id="filter-status" onchange="filterDocs()">
+          <option value="">All statuses</option>
+          <option value="DONE">Done</option>
+          <option value="FAILED">Failed</option>
+          <option value="PROCESSING">Processing</option>
+        </select>
+      </div>
+      <div id="docs-table"><p class="empty">Loading…</p></div>
+    </section>
+  </main>
+</th:block>
+
+<script layout:fragment="scripts">
+  const api = '';
+  let allDocs = [];
+
+
+  async function loadDocs() {
+    const container = document.getElementById('docs-table');
+    try {
+      const res = await fetch(`${api}/api/documents?limit=200`);
+      allDocs   = await res.json();
+      filterDocs();
+    } catch (e) {
+      container.innerHTML = `<p class="empty" style="color:#c62828">Failed to load: ${esc(e.message)}</p>`;
+    }
+  }
+
+  function filterDocs() {
+    const nameQ   = document.getElementById('filter-name').value.toLowerCase();
+    const statusQ = document.getElementById('filter-status').value;
+    const filtered = allDocs.filter(d => {
+      const matchName   = !nameQ   || d.filename.toLowerCase().includes(nameQ);
+      const matchStatus = !statusQ || d.status === statusQ;
+      return matchName && matchStatus;
+    });
+    renderDocs(filtered);
+  }
+
+  function renderDocs(docs) {
+    const container = document.getElementById('docs-table');
+    if (!docs.length) {
+      container.innerHTML = allDocs.length
+        ? '<p class="empty">No documents match the filter.</p>'
+        : '<p class="empty">No documents ingested yet. <a href="/ingest" style="color:#4361ee">Upload one →</a></p>';
+      return;
+    }
+    container.innerHTML = `
+      <table>
+        <thead><tr>
+          <th>Filename</th><th>Type</th><th>Status</th><th>Ingested</th><th></th>
+        </tr></thead>
+        <tbody>
+          ${docs.map(d => `<tr id="doc-row-${d.id}">
+            <td>${esc(d.filename)}</td>
+            <td><small style="color:#6b7280">${esc(d.contentType)}</small></td>
+            <td>${badge(d.status)}</td>
+            <td><small style="color:#6b7280">${new Date(d.createdAt).toLocaleString()}</small></td>
+            <td style="text-align:right">
+              <button class="btn-sm btn-danger" onclick="deleteDoc('${d.id}','${esc(d.filename)}')">Delete</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  async function deleteDoc(id, filename) {
+    if (!confirm(`Delete "${filename}"?\nThis will permanently remove the document and all its chunks.`)) return;
+    try {
+      const res = await fetch(`${api}/api/documents/${id}`, { method: 'DELETE' });
+      if (res.status === 204) {
+        allDocs = allDocs.filter(d => d.id !== id);
+        const row = document.getElementById(`doc-row-${id}`);
+        if (row) row.remove();
+        if (!document.querySelector('#docs-table tr[id^="doc-row-"]')) filterDocs();
+      } else {
+        alert(`Failed to delete (HTTP ${res.status})`);
+      }
+    } catch (e) {
+      alert(`Network error: ${e.message}`);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => { loadDocs(); });
+
+  function badge(s) {
+    const cls = s === 'DONE' ? 'badge-done' : s === 'FAILED' ? 'badge-failed' : 'badge-other';
+    return `<span class="badge ${cls}">${s}</span>`;
+  }
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+</script>
+</body>
+</html>
