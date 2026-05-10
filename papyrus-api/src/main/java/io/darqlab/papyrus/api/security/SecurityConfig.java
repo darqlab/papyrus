@@ -79,7 +79,8 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health").permitAll()
-                .requestMatchers("/css/**", "/js/**", "/fonts/**", "/favicon.ico", "/assets/**").permitAll()
+                .requestMatchers("/css/**", "/js/**", "/fonts/**", "/favicon.ico", "/assets/**", "/*.css", "/*.js").permitAll()
+                .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/manage/**").hasRole("ADMIN")
                 .requestMatchers("/ingest/**").hasAnyRole("ADMIN", "CONTRIBUTOR")
                 .anyRequest().authenticated()

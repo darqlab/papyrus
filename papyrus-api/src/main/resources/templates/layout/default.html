@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title layout:title-pattern="$CONTENT_TITLE — Papyrus">Papyrus</title>
+  <script>
+    (function() {
+      const theme = localStorage.getItem('papyrus-theme') || 'dark';
+      if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    })();
+  </script>
+  <link rel="stylesheet" th:href="@{/sidebar.css}">
+  <th:block layout:fragment="head"></th:block>
+</head>
+<body>
+
+<aside id="sidebar">
+  <div class="logo">Papyrus</div>
+  <th:block th:replace="~{fragments/sidebar :: sidebar-nav}"></th:block>
+  <th:block layout:fragment="sidebar-extra"><!-- page-specific sidebar additions --></th:block>
+  <div id="sidebar-footer">
+    <button id="theme-toggle" style="background:none;border:none;color:#a0a0c0;font-size:1.1rem;cursor:pointer;padding:.4rem;margin-right:auto" title="Toggle dark mode">
+      <span id="theme-icon">☀️</span>
+    </button>
+    <div class="health-dot" id="health-dot"></div>
+    <span id="health-label">Connecting…</span>
+  </div>
+</aside>
+
+<div id="main">
+  <th:block layout:fragment="content"></th:block>
+</div>
+
+<script th:src="@{/sidebar.js}"></script>
+<th:block layout:fragment="scripts"></th:block>
+
+</body>
+</html>
