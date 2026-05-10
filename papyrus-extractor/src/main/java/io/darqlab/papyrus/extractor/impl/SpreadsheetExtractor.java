@@ -7,6 +7,8 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.usermodel.XSSFCell;
+import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.IOException;
@@ -40,7 +42,14 @@ public class SpreadsheetExtractor implements DocumentExtractor {
                     List<String> cells = new ArrayList<>();
                     for (Cell cell : row) {
                         String val = FORMATTER.formatCellValue(cell).strip();
-                        if (!val.isBlank()) cells.add(val);
+                        if (!val.isBlank()) {
+                            boolean struck = false;
+                            if (cell instanceof XSSFCell xssfCell) {
+                                XSSFFont font = xssfCell.getCellStyle().getFont();
+                                struck = font != null && font.getStrikeout();
+                            }
+                            cells.add(struck ? "[STRUCK OUT: " + val + "]" : val);
+                        }
                     }
                     if (!cells.isEmpty()) rows.add(String.join("\t", cells));
                 }

@@ -1,6 +1,8 @@
 package io.darqlab.papyrus.extractor.impl;
 
 import io.darqlab.papyrus.core.domain.ExtractedText;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.Test;
 
@@ -50,7 +52,44 @@ class SpreadsheetExtractorTest {
         assertTrue(result.content().isBlank());
     }
 
+    @Test
+    void extract_strikeoutCell_wrapsWithAnnotation() throws IOException {
+        byte[] xlsx = buildXlsxWithStrikeout("Sheet1", "superseded value");
+
+        ExtractedText result = extractor.extract(new ByteArrayInputStream(xlsx), "struck.xlsx");
+
+        assertTrue(result.content().contains("[STRUCK OUT: superseded value]"),
+                "Strikeout cell should be annotated: " + result.content());
+    }
+
+    @Test
+    void extract_normalCell_noAnnotation() throws IOException {
+        byte[] xlsx = buildXlsx("Sheet1", new String[][]{{"active value"}});
+
+        ExtractedText result = extractor.extract(new ByteArrayInputStream(xlsx), "normal.xlsx");
+
+        assertFalse(result.content().contains("[STRUCK OUT:"),
+                "Normal cell should not be annotated: " + result.content());
+        assertTrue(result.content().contains("active value"));
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private byte[] buildXlsxWithStrikeout(String sheetName, String cellValue) throws IOException {
+        try (XSSFWorkbook wb = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            var sheet = wb.createSheet(sheetName);
+            XSSFFont font = wb.createFont();
+            font.setStrikeout(true);
+            XSSFCellStyle style = wb.createCellStyle();
+            style.setFont(font);
+            var cell = sheet.createRow(0).createCell(0);
+            cell.setCellValue(cellValue);
+            cell.setCellStyle(style);
+            wb.write(out);
+            return out.toByteArray();
+        }
+    }
 
     private byte[] buildXlsx(String sheetName, String[][] rows) throws IOException {
         try (XSSFWorkbook wb = new XSSFWorkbook();

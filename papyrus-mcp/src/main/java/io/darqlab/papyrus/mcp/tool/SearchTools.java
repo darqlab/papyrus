@@ -35,7 +35,10 @@ public class SearchTools {
 
     @Tool(name = "search",
           description = "Semantically search the Papyrus document knowledge base. " +
-                        "Returns ranked text chunks with relevance scores.")
+                        "Returns ranked text chunks with relevance scores. " +
+                        "Text wrapped in [STRUCK OUT: ...] represents content that is no longer " +
+                        "applicable or has been superseded in the source document — treat it as " +
+                        "a prior version, not as current policy.")
     public String search(
             @ToolParam(description = "Natural language search query")
             String query,
