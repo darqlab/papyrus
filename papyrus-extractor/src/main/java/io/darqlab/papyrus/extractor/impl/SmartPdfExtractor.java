@@ -56,7 +56,7 @@ public class SmartPdfExtractor implements DocumentExtractor {
 
         try (PDDocument document = Loader.loadPDF(bytes)) {
             int pageCount = document.getNumberOfPages();
-            PDFTextStripper stripper = new PDFTextStripper();
+            PDFTextStripper stripper = new DigitalPdfExtractor.StrikeoutAwarePDFStripper();
             PDFRenderer renderer = new PDFRenderer(document);
             List<String> pageTexts = new ArrayList<>(pageCount);
             boolean ocrUsed = false;
