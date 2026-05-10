@@ -5,8 +5,9 @@
       xmlns:th="http://www.thymeleaf.org">
 <head>
   <title>Papyrus — Chat</title>
+  <th:block layout:fragment="head">
   <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
-  <style layout:fragment="head">
+  <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
@@ -339,6 +340,7 @@
     [data-theme="dark"] .error-banner a:hover { color: #f87171; }
 
   </style>
+  </th:block>
 </head>
 <body>
 
@@ -371,7 +373,7 @@
 </div>
 </th:block>
 
-<script>
+<script layout:fragment="scripts">
   marked.use({ breaks: true, gfm: true });
 
   const messagesEl    = document.getElementById('messages');
