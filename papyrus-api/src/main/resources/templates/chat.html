@@ -353,6 +353,7 @@
 
 
 <!-- ── Chat column ─────────────────────────────────────────────────── -->
+<th:block layout:fragment="content">
 <div id="chat-wrap">
     <div id="messages">
       <div class="msg assistant">
@@ -377,6 +378,7 @@
       <span id="char-count">0</span>
     </div>
 </div>
+</th:block>
 
 <script>
   marked.use({ breaks: true, gfm: true });

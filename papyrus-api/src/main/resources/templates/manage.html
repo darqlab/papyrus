@@ -202,7 +202,7 @@
 </head>
 <body>
 
-
+<th:block layout:fragment="content">
   <div id="header">
     <h1>Archive Manager</h1>
     <div id="header-actions">
@@ -255,6 +255,7 @@
 
 <!-- ── Toast area ─────────────────────────────────────────────────── -->
 <div id="toast-area"></div>
+</th:block>
 
 <script layout:fragment="scripts">
   let allDocs = [];
