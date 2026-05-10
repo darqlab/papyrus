@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.Collections;
@@ -175,6 +176,42 @@ public class ArchiveService {
         } catch (IOException e) {
             log.warn("Failed to archive source {} ({}): {}", sourceId, filename, e.getMessage());
             return null;
+        }
+    }
+
+    /**
+     * Overwrite the extracted text file for an already-archived source.
+     * Used when re-extracting from the original file to refresh annotations.
+     */
+    public void writeExtractedText(UUID sourceId, String archiveFilename, String extractedText) {
+        if (!enabled) return;
+        try {
+            Path file = basePath.resolve(sourceId.toString()).resolve(archiveFilename + ".txt");
+            Files.writeString(file, extractedText, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            log.warn("Failed to write extracted text for {}/{}: {}", sourceId, archiveFilename, e.getMessage());
+        }
+    }
+
+    /**
+     * Delete the archive directory for a source, including all files within it.
+     * No-op if the directory does not exist or archiving is disabled.
+     */
+    public void deleteArchiveDir(UUID sourceId) {
+        if (!enabled) return;
+        Path dir = basePath.resolve(sourceId.toString());
+        if (!Files.exists(dir)) return;
+        try {
+            Files.walk(dir)
+                    .sorted(Comparator.reverseOrder())
+                    .forEach(p -> {
+                        try { Files.delete(p); } catch (IOException e) {
+                            log.warn("Failed to delete archive entry {}: {}", p, e.getMessage());
+                        }
+                    });
+            log.debug("Deleted archive directory for source {}", sourceId);
+        } catch (IOException e) {
+            log.warn("Failed to delete archive dir for source {}: {}", sourceId, e.getMessage());
         }
     }
 
