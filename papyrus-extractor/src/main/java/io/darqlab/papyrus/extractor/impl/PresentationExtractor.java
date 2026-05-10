@@ -6,6 +6,8 @@ import io.darqlab.papyrus.extractor.ExtractionException;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFShape;
 import org.apache.poi.xslf.usermodel.XSLFSlide;
+import org.apache.poi.xslf.usermodel.XSLFTextParagraph;
+import org.apache.poi.xslf.usermodel.XSLFTextRun;
 import org.apache.poi.xslf.usermodel.XSLFTextShape;
 
 import java.io.IOException;
@@ -34,9 +36,9 @@ public class PresentationExtractor implements DocumentExtractor {
                 List<String> parts = new ArrayList<>();
                 for (XSLFShape shape : slide.getShapes()) {
                     if (shape instanceof XSLFTextShape textShape) {
-                        String text = textShape.getText();
-                        if (text != null && !text.isBlank()) {
-                            parts.add(text.strip());
+                        String text = extractShapeText(textShape);
+                        if (!text.isBlank()) {
+                            parts.add(text);
                         }
                     }
                 }
@@ -52,6 +54,25 @@ public class PresentationExtractor implements DocumentExtractor {
         } catch (IOException e) {
             throw new ExtractionException("Failed to extract text from presentation: " + filename, e);
         }
+    }
+
+    private String extractShapeText(XSLFTextShape shape) {
+        StringBuilder sb = new StringBuilder();
+        for (XSLFTextParagraph para : shape.getTextParagraphs()) {
+            StringBuilder line = new StringBuilder();
+            for (XSLFTextRun run : para.getTextRuns()) {
+                String text = run.getRawText();
+                if (text == null || text.isEmpty()) continue;
+                if (run.isStrikethrough()) {
+                    line.append("[STRUCK OUT: ").append(text).append("]");
+                } else {
+                    line.append(text);
+                }
+            }
+            String lineStr = line.toString().strip();
+            if (!lineStr.isBlank()) sb.append(lineStr).append("\n");
+        }
+        return sb.toString().strip();
     }
 
     @Override

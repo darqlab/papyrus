@@ -2,6 +2,7 @@ package io.darqlab.papyrus.extractor.impl;
 
 import io.darqlab.papyrus.core.domain.ExtractedText;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.apache.poi.xwpf.usermodel.XWPFTable;
 import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.junit.jupiter.api.Test;
@@ -62,6 +63,37 @@ class OfficeExtractorTest {
                 "Right column should be extracted — was previously dropped by getParagraphs()");
     }
 
+    @Test
+    void extract_struckRun_wrapsWithAnnotation() throws IOException {
+        byte[] docxBytes = buildDocxWithStrikethrough("old wording", false);
+
+        ExtractedText result = extractor.extract(new ByteArrayInputStream(docxBytes), "struck.docx");
+
+        assertTrue(result.content().contains("[STRUCK OUT: old wording]"),
+                "Struck run should be annotated: " + result.content());
+    }
+
+    @Test
+    void extract_doubleStrikeRun_wrapsWithAnnotation() throws IOException {
+        byte[] docxBytes = buildDocxWithStrikethrough("double struck", true);
+
+        ExtractedText result = extractor.extract(new ByteArrayInputStream(docxBytes), "dstruck.docx");
+
+        assertTrue(result.content().contains("[STRUCK OUT: double struck]"),
+                "Double-struck run should be annotated: " + result.content());
+    }
+
+    @Test
+    void extract_nonStruckRun_noAnnotation() throws IOException {
+        byte[] docxBytes = buildDocx("normal text");
+
+        ExtractedText result = extractor.extract(new ByteArrayInputStream(docxBytes), "normal.docx");
+
+        assertFalse(result.content().contains("[STRUCK OUT:"),
+                "Normal text should not be annotated: " + result.content());
+        assertTrue(result.content().contains("normal text"));
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private byte[] buildDocx(String... paragraphs) throws IOException {
@@ -70,6 +102,21 @@ class OfficeExtractorTest {
 
             for (String text : paragraphs) {
                 doc.createParagraph().createRun().setText(text);
+            }
+            doc.write(out);
+            return out.toByteArray();
+        }
+    }
+
+    private byte[] buildDocxWithStrikethrough(String text, boolean doubleStrike) throws IOException {
+        try (XWPFDocument doc = new XWPFDocument();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            XWPFRun run = doc.createParagraph().createRun();
+            run.setText(text);
+            if (doubleStrike) {
+                run.setDoubleStrikethrough(true);
+            } else {
+                run.setStrikeThrough(true);
             }
             doc.write(out);
             return out.toByteArray();

@@ -28,7 +28,7 @@ public class OfficeExtractor implements DocumentExtractor {
 
             for (IBodyElement element : document.getBodyElements()) {
                 if (element instanceof XWPFParagraph para) {
-                    String text = para.getText();
+                    String text = extractParagraphText(para);
                     if (!text.isBlank()) lines.add(text);
                 } else if (element instanceof XWPFTable table) {
                     extractTableText(table, lines);
@@ -53,7 +53,7 @@ public class OfficeExtractor implements DocumentExtractor {
             for (XWPFTableCell cell : row.getTableCells()) {
                 StringBuilder cellContent = new StringBuilder();
                 for (XWPFParagraph para : cell.getParagraphs()) {
-                    String text = para.getText();
+                    String text = extractParagraphText(para);
                     if (!text.isBlank()) {
                         if (!cellContent.isEmpty()) cellContent.append(" ");
                         cellContent.append(text);
@@ -63,6 +63,20 @@ public class OfficeExtractor implements DocumentExtractor {
             }
             if (!cellTexts.isEmpty()) lines.add(String.join("\t", cellTexts));
         }
+    }
+
+    private String extractParagraphText(XWPFParagraph para) {
+        StringBuilder sb = new StringBuilder();
+        for (XWPFRun run : para.getRuns()) {
+            String text = run.getText(0);
+            if (text == null || text.isEmpty()) continue;
+            if (run.isStrikeThrough() || run.isDoubleStrikeThrough()) {
+                sb.append("[STRUCK OUT: ").append(text).append("]");
+            } else {
+                sb.append(text);
+            }
+        }
+        return sb.toString();
     }
 
     @Override
