@@ -53,7 +53,7 @@ public class DigitalPdfExtractor implements DocumentExtractor {
         return SUPPORTED.contains(mimeType);
     }
 
-    private static class StrikeoutAwarePDFStripper extends PDFTextStripper {
+    static class StrikeoutAwarePDFStripper extends PDFTextStripper {
 
         // Tracks current non-stroking color during content stream processing
         private boolean currentlyRed = false;

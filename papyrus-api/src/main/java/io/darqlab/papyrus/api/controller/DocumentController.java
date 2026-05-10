@@ -258,7 +258,7 @@ public class DocumentController {
 
     /**
      * Re-ingest an archived source with the current embedding model.
-     * Creates a new source record; the original is preserved.
+     * Reads the cached extracted text — fast but uses previously extracted content.
      * <p>POST /api/documents/{id}/reingest</p>
      */
     @PreAuthorize("hasRole('ADMIN')")
@@ -275,6 +275,37 @@ public class DocumentController {
         Thread.ofVirtual().start(() -> {
             try {
                 documentService.reingest(id);
+                jobService.recordSuccess(job.id());
+                jobService.markDone(job.id());
+            } catch (Exception e) {
+                jobService.recordFailure(job.id());
+                jobService.markFailed(job.id());
+            }
+        });
+
+        return ResponseEntity.accepted().body(new AsyncUploadResponse(job.id(), source.filename(), "QUEUED", false));
+    }
+
+    /**
+     * Re-ingest an archived source by re-running the full extractor on the original file.
+     * Slower than /reingest — use when extraction logic has changed (e.g. strikeout detection).
+     * Overwrites the cached .txt with fresh extraction results.
+     * <p>POST /api/documents/{id}/reingest-file</p>
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{id}/reingest-file")
+    public ResponseEntity<AsyncUploadResponse> reingestFromFile(@PathVariable UUID id) {
+        Source source = vectorStoreService.findById(id);
+        if (source == null) return ResponseEntity.notFound().build();
+        if (source.archiveFilename() == null)
+            return ResponseEntity.badRequest().build();
+
+        IngestionJob job = jobService.createJob(1);
+        jobService.markRunning(job.id());
+
+        Thread.ofVirtual().start(() -> {
+            try {
+                documentService.reingestFromFile(id);
                 jobService.recordSuccess(job.id());
                 jobService.markDone(job.id());
             } catch (Exception e) {

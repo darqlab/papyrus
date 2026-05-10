@@ -22,7 +22,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -202,15 +205,18 @@ public class DocumentService {
     }
 
     /**
-     * Delete all chunks and the source record for the given source ID.
+     * Delete all chunks, the source record, and the archive directory for the given source ID.
+     * Archive is only deleted for original sources — re-ingested sources share the original's archive dir.
      * Returns false if the source does not exist.
      */
     @Transactional
     public boolean delete(UUID sourceId) {
-        if (!sourceRepository.existsById(sourceId)) {
-            return false;
-        }
+        DocumentSourceEntity entity = sourceRepository.findById(sourceId).orElse(null);
+        if (entity == null) return false;
         vectorStoreService.deleteBySourceId(sourceId);
+        if (entity.getArchiveFilename() != null && entity.getArchiveSourceId() == null) {
+            archiveService.deleteArchiveDir(sourceId);
+        }
         return true;
     }
 
@@ -273,6 +279,68 @@ public class DocumentService {
             source.setError(e.getMessage());
             sourceRepository.save(source);
             throw new RuntimeException("Re-ingestion failed for source " + originalSourceId, e);
+        }
+    }
+
+    /**
+     * Re-ingest an archived source by re-running the full extractor on the original file.
+     * Overwrites the archive .txt with fresh extraction, creates a new source record.
+     * Slower than {@link #reingest} — use when extraction logic has changed (e.g. strikeout detection).
+     */
+    @Transactional
+    public IngestionResult reingestFromFile(UUID originalSourceId) {
+        Source original = vectorStoreService.findById(originalSourceId);
+        if (original == null) throw new IllegalArgumentException("Source not found: " + originalSourceId);
+        if (original.archiveFilename() == null) throw new IllegalStateException("Source has no archived file: " + originalSourceId);
+
+        UUID archiveDirId = original.archiveSourceId() != null ? original.archiveSourceId() : originalSourceId;
+        Path originalFile = archiveService.findOriginalFile(archiveDirId, original.archiveFilename());
+        if (originalFile == null)
+            throw new IllegalStateException("Original file not found in archive: " + archiveDirId + "/" + original.archiveFilename());
+
+        byte[] content;
+        try {
+            content = Files.readAllBytes(originalFile);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read archived file: " + originalFile, e);
+        }
+
+        UUID newSourceId = UUID.randomUUID();
+        ChunkingStrategy storedStrategy = original.chunkingStrategy() != null
+                ? ChunkingStrategy.valueOf(original.chunkingStrategy()) : null;
+        DocumentSourceEntity source = new DocumentSourceEntity(
+                newSourceId, original.filename(), original.contentType(), (long) content.length,
+                "eng", IngestionStatus.PROCESSING);
+        source.setArchiveFilename(original.archiveFilename());
+        source.setArchiveSourceId(archiveDirId);
+        source.setChunkingStrategy(storedStrategy);
+        source.setChunkingMaxTokens(original.chunkingMaxTokens());
+        source.setChunkingOverlapTokens(original.chunkingOverlapTokens());
+        sourceRepository.saveAndFlush(source);
+
+        try {
+            ExtractedText extracted = formatRouter.route(new ByteArrayInputStream(content), original.filename());
+            archiveService.writeExtractedText(archiveDirId, original.archiveFilename(), extracted.content());
+
+            ChunkingConfig config = resolveConfig(storedStrategy, original.chunkingMaxTokens(), original.chunkingOverlapTokens());
+            List<String> chunks = chunkingService.chunk(extracted, config);
+            source.setPageCount(extracted.pageCount());
+
+            if (!chunks.isEmpty()) {
+                List<List<Float>> embeddings = chunks.stream().map(embeddingService::embed).toList();
+                List<Integer> tokenCounts = chunks.stream().map(TokenEstimator::estimate).toList();
+                vectorStoreService.storeChunks(newSourceId, chunks, embeddings, tokenCounts, null);
+            }
+
+            source.setStatus(IngestionStatus.DONE);
+            sourceRepository.save(source);
+            return new IngestionResult(newSourceId, original.filename(), chunks.size(), false);
+
+        } catch (Exception e) {
+            source.setStatus(IngestionStatus.FAILED);
+            source.setError(e.getMessage());
+            sourceRepository.save(source);
+            throw new RuntimeException("Re-ingestion from file failed for " + originalSourceId, e);
         }
     }
 
