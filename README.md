@@ -11,6 +11,7 @@ Self-hosted document intelligence MCP server. Ingest, index, and semantically se
 - MCP server (Streamable HTTP transport) for direct integration with AI assistants — works in claude.ai, Claude mobile, and Claude Code
 - Web UI for ingestion and search
 - Role-based access control (RBAC) via Zitadel — roles: `ADMIN`, `CONTRIBUTOR`, `READER`
+- User management admin panel — invite users, change roles, and remove access via the Zitadel Management API
 
 ## Architecture
 
@@ -92,6 +93,7 @@ SearchController → VoyageAiEmbeddingService.embed(query)
 | `ZITADEL_INTROSPECTION_URI` | MCP only | `https://<instance>.zitadel.cloud/oauth/v2/introspect` — validates PATs |
 | `ZITADEL_INTROSPECTION_CLIENT_ID` | MCP only | Client ID of the `papyrus-introspect` API app |
 | `ZITADEL_INTROSPECTION_CLIENT_SECRET` | MCP only | Client secret of the `papyrus-introspect` API app |
+| `ZITADEL_MGMT_PAT` | Admin panel only | Personal Access Token of a Zitadel service account with Management API access — required for `/admin/users` to function |
 | **Other** | | |
 | `TESSDATA_PREFIX` | No | Tesseract data path (Alpine Docker: `/usr/share/tessdata`) |
 
@@ -248,7 +250,7 @@ Papyrus uses **Zitadel** as its identity provider. Security is active in all Spr
 |------|--------|
 | `READER` | Search, chat, view documents (default when no role assigned) |
 | `CONTRIBUTOR` | + ingest documents and URLs |
-| `ADMIN` | + delete sources, re-ingest, access `/manage` |
+| `ADMIN` | + delete sources, re-ingest, access `/manage`, manage users via `/admin/users` |
 
 ### papyrus-api (browser)
 
@@ -276,6 +278,16 @@ The MCP server validates tokens via **opaque token introspection** — Zitadel P
 
 Create a service user in Zitadel (Bearer access token type), generate a PAT, and optionally assign a project role. Users with no role default to `READER`.
 
+### User management (Admin panel)
+
+Admins can manage Zitadel users directly from the web UI at `/admin/users`. The panel supports:
+
+- **Invite user** — creates a Zitadel account and assigns a project role (READER, CONTRIBUTOR, or ADMIN)
+- **Change role** — updates an existing user's project role grant in Zitadel
+- **Remove access** — revokes the project role grant (the Zitadel account itself is not deleted)
+
+The backend proxies these operations to the **Zitadel Management API** using a service-account PAT configured via `ZITADEL_MGMT_PAT`. See [Zitadel Setup Guide](docs/Zitadel_Setup_Guide.md) for how to create the service account and grant it the `IAM_OWNER` or `PROJECT_OWNER` role.
+
 ### Local development
 
 Start with `SPRING_PROFILES_ACTIVE=dev` to bypass all security (permit-all).
@@ -296,6 +308,10 @@ Start with `SPRING_PROFILES_ACTIVE=dev` to bypass all security (permit-all).
 | `POST` | `/api/search` | READER | Semantic search |
 | `GET` | `/api/jobs/{id}` | READER | Batch job status |
 | `GET` | `/api/me` | authenticated | Current user name and roles |
+| `GET` | `/api/admin/users` | ADMIN | List all users with roles from Zitadel |
+| `POST` | `/api/admin/users` | ADMIN | Invite a new user (creates Zitadel account + role grant) |
+| `PUT` | `/api/admin/users/{userId}/role` | ADMIN | Update a user's project role |
+| `DELETE` | `/api/admin/users/{userId}` | ADMIN | Remove a user's role grant (`?grantId=…` required) |
 
 **Search request:**
 ```json
@@ -353,6 +369,9 @@ Served by `papyrus-api` at `/`:
 | Ingest | `/ingest` | CONTRIBUTOR+ | Upload documents; 3-step image flow with OCR preview |
 | Documents | `/documents` | READER | List, filter, and delete ingested documents |
 | Manage | `/manage` | ADMIN | Archive manager — re-ingest with current embedding model |
+| Users | `/admin/users` | ADMIN | Invite users, change roles, remove access via Zitadel |
+
+All pages share a common sidebar rendered server-side via Thymeleaf. Navigation items are shown or hidden based on the authenticated user's role (`sec:authorize`).
 
 ## License
 
