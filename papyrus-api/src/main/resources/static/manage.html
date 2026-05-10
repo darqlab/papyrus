@@ -496,7 +496,10 @@
         </td>
         <td class="col-action" style="text-align:right">
           ${canReingest
-            ? `<button class="btn btn-ghost" style="font-size:.8rem;padding:.3rem .7rem" onclick="reingestOne('${d.id}', '${esc(d.filename)}')">Re-ingest</button>`
+            ? `<div style="display:flex;flex-direction:column;gap:.25rem;align-items:flex-end">
+                <button class="btn btn-ghost" style="font-size:.78rem;padding:.25rem .6rem" onclick="reingestOne('${d.id}', '${esc(d.filename)}')">Re-ingest (text)</button>
+                <button class="btn btn-ghost" style="font-size:.78rem;padding:.25rem .6rem;color:#d97706" onclick="reingestOneFromFile('${d.id}', '${esc(d.filename)}')">Re-ingest (file)</button>
+              </div>`
             : `<span style="font-size:.78rem;color:#d1d5db">—</span>`}
         </td>
       </tr>`;
@@ -522,13 +525,34 @@
     }
   }
 
-  // ── Re-ingest one ─────────────────────────────────────────────────
+  // ── Re-ingest one (from cached text — fast) ──────────────────────
   async function reingestOne(sourceId, filename) {
     try {
       const res = await fetch(`/api/documents/${sourceId}/reingest`, { method: 'POST' });
       if (!res.ok) { showToast(`Re-ingest failed (${res.status})`, 'err'); return; }
       const job = await res.json();
       showToast(`Re-ingesting ${filename}…`, 'run');
+      pollJob(job.jobId, filename);
+    } catch (e) {
+      showToast(`Error: ${e.message}`, 'err');
+    }
+  }
+
+  // ── Re-ingest one (from original file — slow, re-runs extraction) ─
+  async function reingestOneFromFile(sourceId, filename) {
+    const ok = confirm(
+      `Re-ingest from original file: "${filename}"\n\n` +
+      `This re-runs the full extractor on the original archived file.\n` +
+      `For large documents (100+ pages) this may take several minutes.\n\n` +
+      `Use this when extraction logic has changed (e.g. strikeout detection).\n\n` +
+      `Continue?`
+    );
+    if (!ok) return;
+    try {
+      const res = await fetch(`/api/documents/${sourceId}/reingest-file`, { method: 'POST' });
+      if (!res.ok) { showToast(`Re-ingest failed (${res.status})`, 'err'); return; }
+      const job = await res.json();
+      showToast(`Re-extracting ${filename} — this may take a while…`, 'run');
       pollJob(job.jobId, filename);
     } catch (e) {
       showToast(`Error: ${e.message}`, 'err');

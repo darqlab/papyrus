@@ -101,6 +101,9 @@ All docs live in `/home/dennis/devops/projects/papyrus/docs/`.
 | `Papyrus_UserManagement_TM.md` | User Management UI — Task Management |
 | `Papyrus_UserManagement_TDD.md` | User Management UI — Technical Design Document (✅ complete) |
 | `Papyrus_ClaudeAI_MCP_Setup.md` | claude.ai connector setup — OAuth2 via Zitadel, PAT for Claude Code |
+| `Papyrus_StrikeoutDetection_IA.md` | Strikethrough text detection — Issue Analysis (#58) |
+| `Papyrus_StrikeoutDetection_IP.md` | Strikethrough text detection — Implementation Plan (#58) |
+| `Papyrus_StrikeoutDetection_TM.md` | Strikethrough text detection — Task Management (#58) |
 
 ---
 
