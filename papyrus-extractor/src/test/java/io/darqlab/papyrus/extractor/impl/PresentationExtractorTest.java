@@ -3,6 +3,7 @@ package io.darqlab.papyrus.extractor.impl;
 import io.darqlab.papyrus.core.domain.ExtractedText;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFTextBox;
+import org.apache.poi.xslf.usermodel.XSLFTextRun;
 import org.junit.jupiter.api.Test;
 
 import java.awt.geom.Rectangle2D;
@@ -53,7 +54,42 @@ class PresentationExtractorTest {
         }
     }
 
+    @Test
+    void extract_struckRun_wrapsWithAnnotation() throws IOException {
+        byte[] pptx = buildPptxWithStrikethrough("deprecated slide content");
+
+        ExtractedText result = extractor.extract(new ByteArrayInputStream(pptx), "struck.pptx");
+
+        assertTrue(result.content().contains("[STRUCK OUT: deprecated slide content]"),
+                "Struck run should be annotated: " + result.content());
+    }
+
+    @Test
+    void extract_normalRun_noAnnotation() throws IOException {
+        byte[] pptx = buildPptx("current slide content");
+
+        ExtractedText result = extractor.extract(new ByteArrayInputStream(pptx), "normal.pptx");
+
+        assertFalse(result.content().contains("[STRUCK OUT:"),
+                "Normal text should not be annotated: " + result.content());
+        assertTrue(result.content().contains("current slide content"));
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private byte[] buildPptxWithStrikethrough(String text) throws IOException {
+        try (XMLSlideShow ppt = new XMLSlideShow();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            var slide = ppt.createSlide();
+            XSLFTextBox box = slide.createTextBox();
+            box.setAnchor(new Rectangle2D.Double(50, 50, 600, 100));
+            XSLFTextRun run = box.addNewTextParagraph().addNewTextRun();
+            run.setText(text);
+            run.setStrikethrough(true);
+            ppt.write(out);
+            return out.toByteArray();
+        }
+    }
 
     private byte[] buildPptx(String... slideTexts) throws IOException {
         try (XMLSlideShow ppt = new XMLSlideShow();
