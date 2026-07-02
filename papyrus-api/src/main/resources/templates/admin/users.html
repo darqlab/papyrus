@@ -31,9 +31,9 @@
     .page-header h1 { font-size: 1.35rem; font-weight: 700; }
 
     /* ── Invite form ─────────────────────────────────────────────── */
-    #invite-panel { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; }
-    #invite-panel.open { display: block; }
-    #invite-panel h3 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
+    #invite-panel, #mcp-panel { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; }
+    #invite-panel.open, #mcp-panel.open { display: block; }
+    #invite-panel h3, #mcp-panel h3 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
     .invite-row { display: flex; gap: .75rem; flex-wrap: wrap; align-items: flex-end; }
     .invite-row label { display: flex; flex-direction: column; gap: .3rem; font-size: .82rem; color: var(--text-muted); }
     .invite-row input, .invite-row select {
@@ -95,6 +95,17 @@
     #modal p { font-size: .9rem; color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.5; }
     #modal-actions { display: flex; gap: .5rem; justify-content: flex-end; }
 
+    /* ── Section spacing ────────────────────────────────────────── */
+    .section-header { margin-top: 2.5rem; }
+
+    /* ── Token reveal modal ─────────────────────────────────────── */
+    #token-modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; max-width: 480px; width: 90%; }
+    #token-modal h3 { font-size: 1rem; font-weight: 600; margin-bottom: .6rem; }
+    #token-modal p { font-size: .85rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.5; }
+    #token-box { display: flex; gap: .5rem; align-items: center; background: var(--table-head); border: 1px solid var(--border); border-radius: 7px; padding: .6rem .8rem; margin-bottom: 1.25rem; }
+    #token-value { flex: 1; font-family: ui-monospace, monospace; font-size: .82rem; word-break: break-all; color: var(--text); }
+    #token-warning { font-size: .82rem; color: #b91c1c; margin-bottom: 1rem; }
+    [data-theme="dark"] #token-warning { color: #fca5a5; }
 
   </style>
 </head>
@@ -150,6 +161,47 @@
     </table>
   </div>
 
+  <div class="page-header section-header">
+    <h1>MCP Clients</h1>
+    <button class="btn btn-primary" onclick="toggleMcpPanel()">+ Generate Token</button>
+  </div>
+
+  <!-- Generate MCP token panel -->
+  <div id="mcp-panel">
+    <h3>Generate MCP Client Token</h3>
+    <div class="invite-row">
+      <label>Name <input id="mcp-name" type="text" placeholder="claude-code-darqlab"></label>
+      <label>Role
+        <select id="mcp-role">
+          <option value="READER">Reader</option>
+          <option value="CONTRIBUTOR">Contributor</option>
+          <option value="ADMIN">Admin</option>
+        </select>
+      </label>
+    </div>
+    <div class="invite-actions">
+      <button class="btn btn-primary btn-sm" id="mcp-submit" onclick="submitMcpClient()">Generate</button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleMcpPanel()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- MCP clients table -->
+  <div class="table-wrap">
+    <table id="mcp-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Role</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="mcp-tbody">
+        <tr><td colspan="4" class="empty">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
 </main>
 
 <!-- ── Confirm modal ─────────────────────────────────────────────────── -->
@@ -163,14 +215,32 @@
     </div>
   </div>
 </div>
+
+<!-- ── Token reveal modal ────────────────────────────────────────────── -->
+<div id="token-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100; align-items:center; justify-content:center;">
+  <div id="token-modal">
+    <h3>MCP Client Token</h3>
+    <p id="token-modal-name"></p>
+    <div id="token-warning">This token is shown only once. Copy it now — it cannot be retrieved again.</div>
+    <div id="token-box">
+      <span id="token-value"></span>
+      <button class="btn btn-ghost btn-sm" onclick="copyToken()">Copy</button>
+    </div>
+    <div id="modal-actions">
+      <button class="btn btn-primary btn-sm" onclick="closeTokenModal()">Done</button>
+    </div>
+  </div>
+</div>
 </th:block>
 
 <script layout:fragment="scripts">
 // ── State ──────────────────────────────────────────────────────────────
 let users = [];
 
+let mcpClients = [];
+
 // ── Init ───────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => { loadUsers(); });
+document.addEventListener('DOMContentLoaded', () => { loadUsers(); loadMcpClients(); });
 
 // ── Load users ─────────────────────────────────────────────────────────
 async function loadUsers() {
@@ -287,7 +357,7 @@ async function submitInvite() {
 let pendingRemove = null;
 
 function confirmRemove(userId, grantId, name) {
-  pendingRemove = { userId, grantId };
+  pendingRemove = { type: 'user', userId, grantId };
   document.getElementById('modal-body').textContent =
     `Remove access for ${name}? Their Zitadel account will not be deleted.`;
   document.getElementById('modal-overlay').classList.add('open');
@@ -301,16 +371,118 @@ function closeModal() {
 
 async function doRemove() {
   if (!pendingRemove) return;
-  const { userId, grantId } = pendingRemove;
+  const { type, userId, grantId } = pendingRemove;
   closeModal();
   hideError();
   try {
-    const r = await fetch(`/api/admin/users/${userId}?grantId=${encodeURIComponent(grantId)}`, { method: 'DELETE' });
+    const url = type === 'mcp'
+      ? `/api/admin/mcp-clients/${userId}`
+      : `/api/admin/users/${userId}?grantId=${encodeURIComponent(grantId)}`;
+    const r = await fetch(url, { method: 'DELETE' });
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    await loadUsers();
+    if (type === 'mcp') { await loadMcpClients(); } else { await loadUsers(); }
   } catch(e) {
     showError('Remove failed: ' + e.message);
   }
+}
+
+// ── MCP clients ────────────────────────────────────────────────────────
+async function loadMcpClients() {
+  const tbody = document.getElementById('mcp-tbody');
+  tbody.innerHTML = '<tr><td colspan="4" class="empty">Loading…</td></tr>';
+  try {
+    const r = await fetch('/api/admin/mcp-clients');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    mcpClients = await r.json();
+    renderMcpTable();
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">Failed to load MCP clients.</td></tr>';
+    showError('Could not load MCP clients: ' + e.message);
+  }
+}
+
+function renderMcpTable() {
+  const tbody = document.getElementById('mcp-tbody');
+  if (!mcpClients.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">No MCP clients found.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = mcpClients.map(c => `
+    <tr data-user-id="${c.userId}">
+      <td>${esc(c.name || '—')}</td>
+      <td><span class="badge badge-${c.role.toLowerCase()}">${c.role}</span></td>
+      <td>${fmtDate(c.createdAt)}</td>
+      <td>
+        <div class="action-cell">
+          <button class="btn btn-ghost btn-sm" onclick="confirmRevokeMcp('${c.userId}','${esc(c.name)}')">Revoke</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function confirmRevokeMcp(userId, name) {
+  pendingRemove = { type: 'mcp', userId, grantId: null };
+  document.getElementById('modal-body').textContent =
+    `Revoke token for "${name}"? This deletes the machine user in Zitadel — the token stops working immediately.`;
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('modal-confirm').onclick = doRemove;
+}
+
+function toggleMcpPanel() {
+  const panel = document.getElementById('mcp-panel');
+  panel.classList.toggle('open');
+  if (panel.classList.contains('open')) {
+    document.getElementById('mcp-name').focus();
+  }
+}
+
+async function submitMcpClient() {
+  const name = document.getElementById('mcp-name').value.trim();
+  const role = document.getElementById('mcp-role').value;
+
+  if (!name) { showError('Name is required.'); return; }
+
+  const btn = document.getElementById('mcp-submit');
+  btn.disabled = true; btn.textContent = 'Generating…';
+  hideError();
+
+  try {
+    const r = await fetch('/api/admin/mcp-clients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, role })
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.error || 'HTTP ' + r.status);
+    }
+    const token = await r.json();
+    document.getElementById('mcp-name').value = '';
+    document.getElementById('mcp-panel').classList.remove('open');
+    await loadMcpClients();
+    showTokenModal(name, token.token);
+  } catch(e) {
+    showError('Token generation failed: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Generate';
+  }
+}
+
+function showTokenModal(name, token) {
+  document.getElementById('token-modal-name').textContent = `Client: ${name}`;
+  document.getElementById('token-value').textContent = token;
+  document.getElementById('token-modal-overlay').style.display = 'flex';
+}
+
+function closeTokenModal() {
+  document.getElementById('token-modal-overlay').style.display = 'none';
+  document.getElementById('token-value').textContent = '';
+}
+
+function copyToken() {
+  const text = document.getElementById('token-value').textContent;
+  navigator.clipboard?.writeText(text);
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────

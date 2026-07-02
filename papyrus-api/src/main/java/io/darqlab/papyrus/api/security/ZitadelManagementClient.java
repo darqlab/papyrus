@@ -91,6 +91,65 @@ public class ZitadelManagementClient {
         delete("/management/v1/users/" + userId + "/grants/" + grantId);
     }
 
+    // ── MCP clients (machine users + PATs) ──────────────────────────────────────
+
+    @SuppressWarnings("unchecked")
+    public List<ZitadelMcpClient> listMcpClients() {
+        Map<String, Object> body = Map.of(
+                "queries", List.of(
+                        Map.of("projectIdQuery", Map.of("projectId", projectId))
+                )
+        );
+
+        Map<String, Object> response = post("/management/v1/users/grants/_search", body);
+        List<Map<String, Object>> result = (List<Map<String, Object>>) response.getOrDefault("result", List.of());
+
+        return result.stream()
+                .filter(g -> "TYPE_MACHINE".equals(g.get("userType")))
+                .map(this::toZitadelMcpClient)
+                .toList();
+    }
+
+    /** Creates a machine user, grants it a project role, and issues a Personal Access Token.
+     *  The returned token is shown only once — Zitadel does not store or return it again. */
+    public ZitadelMcpToken createMcpClient(String name, String role) {
+        String userName = "mcp-" + name.toLowerCase().replaceAll("[^a-z0-9-]+", "-");
+        Map<String, Object> createBody = Map.of(
+                "userName",        userName,
+                "name",            name,
+                "description",     "Papyrus MCP client token",
+                "accessTokenType", "ACCESS_TOKEN_TYPE_BEARER"
+        );
+        Map<String, Object> createResponse = post("/management/v1/users/machine", createBody);
+        String userId = (String) createResponse.get("userId");
+        if (userId == null) {
+            throw new IllegalStateException("Zitadel did not return a userId after machine user creation");
+        }
+
+        Map<String, Object> grantBody = Map.of(
+                "projectId", projectId,
+                "roleKeys",  List.of(role)
+        );
+        post("/management/v1/users/" + userId + "/grants", grantBody);
+
+        Map<String, Object> patResponse = post("/management/v1/users/" + userId + "/pats", Map.of());
+        String tokenId = (String) patResponse.get("tokenId");
+        String token   = (String) patResponse.get("token");
+        if (token == null) {
+            throw new IllegalStateException("Zitadel did not return a token after PAT creation");
+        }
+
+        return new ZitadelMcpToken(userId, tokenId, token);
+    }
+
+    /** Deletes the machine user outright — cascades its PAT and project grant.
+     *  Unlike human {@link #removeUser}, a bare grant revocation is not enough here:
+     *  the introspector falls back to ROLE_READER when a token has no role claim,
+     *  so the PAT/user itself must be removed to fully cut off access. */
+    public void deleteMcpClient(String userId) {
+        delete("/management/v1/users/" + userId);
+    }
+
     // ── HTTP helpers ──────────────────────────────────────────────────────────
 
     @SuppressWarnings("unchecked")
@@ -147,5 +206,23 @@ public class ZitadelManagementClient {
         }
 
         return new ZitadelUser(userId, displayName, email, role, grantId, createdAt, lastLogin);
+    }
+
+    @SuppressWarnings("unchecked")
+    private ZitadelMcpClient toZitadelMcpClient(Map<String, Object> grant) {
+        String grantId = (String) grant.get("id");
+        String userId  = (String) grant.get("userId");
+        String name    = (String) grant.getOrDefault("displayName", "");
+
+        List<String> roleKeys = (List<String>) grant.getOrDefault("roleKeys", List.of());
+        String role = roleKeys.isEmpty() ? "READER" : roleKeys.get(0).toUpperCase();
+
+        Instant createdAt = null;
+        Map<String, Object> details = (Map<String, Object>) grant.get("details");
+        if (details != null && details.get("creationDate") instanceof String s) {
+            try { createdAt = Instant.parse(s); } catch (Exception ignored) {}
+        }
+
+        return new ZitadelMcpClient(userId, name, role, grantId, createdAt);
     }
 }
