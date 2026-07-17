@@ -30,10 +30,11 @@ public class PageController {
         return "documents";
     }
 
+    // ADR-008: Manage merged into Documents (role-gated). Route kept as a redirect
+    // so old bookmarks/deep links to /manage don't 404.
     @GetMapping("/manage")
-    public String manage(Model model) {
-        model.addAttribute("activePage", "manage");
-        return "manage";
+    public String manage() {
+        return "redirect:/documents";
     }
 
     @GetMapping("/admin/users")

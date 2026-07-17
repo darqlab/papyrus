@@ -9,134 +9,78 @@
   <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #f7f7f8;
-      --surface: #ffffff;
-      --border: #e5e7eb;
-      --text: #1a1a1a;
-      --text-muted: #6b7280;
-      --text-faint: #9ca3af;
-      --code-bg: #f3f4f6;
-      --table-head: #f9fafb;
-      --input-bg: #ffffff;
-    }
-
-    [data-theme="dark"] {
-      --bg: #0f0f13;
-      --surface: #1c1c24;
-      --border: #2e2e3a;
-      --text: #e8e8f0;
-      --text-muted: #8888a8;
-      --text-faint: #55556a;
-      --code-bg: #1a1a24;
-      --table-head: #1a1a24;
-      --input-bg: #1c1c24;
-    }
-
     html, body { height: 100%; }
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      display: flex;
-      flex-direction: row;
-    }
-
+    body { display: flex; flex-direction: row; }
 
     /* ── Main column (chat) ──────────────────────────────────────── */
-    #main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-    }
+    #main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 
-    /* ── Chat area ───────────────────────────────────────────────── */
-    #chat-wrap {
-      flex: 1;
-      overflow-y: auto;
-      padding: 2rem 1rem;
-      scroll-behavior: smooth;
-    }
-
-    #messages {
-      max-width: 1100px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-      padding-bottom: 1rem;
-    }
+    /* ── Chat area — 760px measure per design-brief.md §4 ─────────── */
+    #chat-wrap { flex: 1; overflow-y: auto; padding: 2.5rem 1.5rem 1.5rem; scroll-behavior: smooth; }
+    #messages { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.75rem; padding-bottom: 1rem; }
 
     /* ── Message bubbles ─────────────────────────────────────────── */
     .msg { display: flex; flex-direction: column; gap: .25rem; width: 100%; }
-    .msg.user { align-items: flex-end; padding-right: 12%; }
-    .msg.assistant { align-items: flex-start; padding-left: 0; }
+    .msg.user { align-items: flex-end; padding-left: 15%; }
+    .msg.assistant { align-items: flex-start; }
 
-    .bubble {
-      position: relative;
-      padding: .75rem 1.1rem;
-      max-width: 88%;
-      line-height: 1.65;
-      font-size: .95rem;
-      word-break: break-word;
-    }
-    :root {
-      --user-bubble-bg: #ede9fe;
-      --user-bubble-text: #1e1b4b;
-      --assistant-bubble-bg: #ffffff;
-      --assistant-bubble-text: #111827;
-    }
-    [data-theme="dark"] {
-      --user-bubble-bg: #4c1d95;
-      --user-bubble-text: #f3e8ff;
-      --assistant-bubble-bg: #2a2a3a;
-      --assistant-bubble-text: #e8e8f0;
-    }
+    .bubble { position: relative; word-break: break-word; }
 
     .msg.user .bubble {
       background: var(--user-bubble-bg);
       color: var(--user-bubble-text);
-      border-radius: 18px 4px 18px 18px;
+      border-radius: 12px 12px 3px 12px;
+      padding: .75rem 1.1rem;
+      max-width: 88%;
+      font-size: .95rem;
+      line-height: 1.55;
     }
+
+    /* Assistant answers — typeset like a page from the library, the reskin's
+       signature element (design-brief.md §9). */
     .msg.assistant .bubble {
       background: var(--assistant-bubble-bg);
       color: var(--assistant-bubble-text);
-      border-radius: 4px 18px 18px 18px;
-      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 1.75rem 2rem 1.25rem;
+      font-size: 17px;
+      line-height: 1.65;
+      width: 100%;
+    }
+
+    /* Fraunces drop cap on the first paragraph only — never the greeting/empty
+       state, which isn't an "answer". */
+    .msg.assistant:not(.greeting) .bubble > p:first-of-type::first-letter {
+      font-family: "Fraunces", Georgia, serif;
+      font-weight: 600;
+      font-size: 3.1em;
+      float: left;
+      line-height: .82;
+      padding: 4px 10px 0 0;
+      color: var(--accent);
     }
 
     /* ── Copy button ─────────────────────────────────────────────── */
     .copy-btn {
-      position: absolute;
-      top: .45rem; right: .55rem;
-      display: none;
-      align-items: center;
-      gap: .25rem;
-      font-size: .72rem;
-      color: var(--text-faint);
-      background: var(--code-bg);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      padding: .2rem .5rem;
-      cursor: pointer;
+      position: absolute; top: .45rem; right: .55rem; display: none;
+      align-items: center; gap: .25rem; font-size: .72rem;
+      color: var(--text-faint); background: var(--code-bg);
+      border: 1px solid var(--border); border-radius: 5px;
+      padding: .2rem .5rem; cursor: pointer;
       transition: color .15s, background .15s;
     }
     .copy-btn svg { width: 11px; height: 11px; }
     .msg.assistant .bubble:hover .copy-btn { display: inline-flex; }
-    .copy-btn:hover { background: var(--border); color: #374151; }
+    .copy-btn:hover { background: var(--border); color: var(--text); }
 
     /* ── Timestamp ───────────────────────────────────────────────── */
-    .msg-time {
-      font-size: .72rem;
-      color: var(--text-faint);
-      padding: 0 .4rem .2rem;
-    }
+    .msg-time { font-size: .72rem; color: var(--text-faint); padding: 0 .4rem .2rem; }
 
     /* Markdown styles inside assistant bubble */
     .bubble p  { margin-bottom: .6em; }
     .bubble p:last-child { margin-bottom: 0; }
+    .bubble p + p { margin-top: .2em; }
     .bubble h1,.bubble h2,.bubble h3 { margin: .8em 0 .4em; font-weight: 600; }
     .bubble ul,.bubble ol { padding-left: 1.4em; margin-bottom: .6em; }
     .bubble li { margin-bottom: .25em; }
@@ -144,200 +88,114 @@
       background: var(--code-bg); border-radius: 8px; padding: .8rem 1rem;
       overflow-x: auto; font-size: .85rem; margin: .6em 0;
     }
-    .bubble code { font-family: 'SFMono-Regular', Consolas, monospace; font-size: .88em; }
+    .bubble code { font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace; font-size: .88em; }
     .bubble p > code { background: var(--code-bg); padding: .1em .4em; border-radius: 4px; }
     .bubble blockquote {
       border-left: 3px solid var(--border); padding-left: .8rem;
       color: var(--text-muted); margin: .5em 0;
     }
     .bubble strong { font-weight: 600; }
-    .bubble a { color: #7c3aed; text-decoration: underline; }
+    .bubble a { color: var(--accent); text-decoration: underline; }
     .bubble table { border-collapse: collapse; width: 100%; margin: .5em 0; font-size: .9em; }
     .bubble th,.bubble td { border: 1px solid var(--border); padding: .4em .7em; }
     .bubble th { background: var(--table-head); font-weight: 600; }
 
+    /* Inline citation links (linkifySourceCitations) */
+    .source-link { color: var(--accent); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--border); transition: color .15s, border-color .15s; }
+    .source-link:hover { color: var(--accent-hover); border-bottom-color: var(--accent-hover); }
+
     /* Thinking indicator */
     .thinking { display: flex; align-items: center; gap: 4px; padding: .6rem .8rem; }
-    .dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      background: #9ca3af; animation: bounce .9s infinite;
-    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); animation: bounce .9s infinite; }
     .dot:nth-child(2) { animation-delay: .15s; }
     .dot:nth-child(3) { animation-delay: .3s; }
-    @keyframes bounce {
-      0%,80%,100% { transform: translateY(0); }
-      40%          { transform: translateY(-6px); }
-    }
+    @keyframes bounce { 0%,80%,100% { transform: translateY(0); } 40% { transform: translateY(-6px); } }
+    @media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
+
+    /* ── Footnotes — citation treatment, the reskin's signature element ──
+       Hairline rule + small numbered entries linking to the source. */
+    .footnotes { margin-top: 22px; padding-top: 2px; width: 100%; }
+    .fn-rule { width: 96px; border: 0; border-top: 1px solid var(--text-faint); margin: 0 0 10px; }
+    .footnotes ul { list-style: none; padding: 0; margin: 0; }
+    .footnotes li { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 6px; }
+    .footnotes a { color: var(--accent); text-decoration: none; }
+    .footnotes a:hover { text-decoration: underline; }
+    .fn-excerpt { display: block; color: var(--text-faint); }
 
     /* ── Input bar ───────────────────────────────────────────────── */
-    #input-wrap {
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      padding: 1rem 1rem .75rem;
-      flex-shrink: 0;
-    }
-    #input-inner {
-      max-width: 1100px;
-      margin: 0 auto;
-      display: flex;
-      gap: .5rem;
-      align-items: flex-end;
-    }
+    #input-wrap { background: var(--bg); border-top: 1px solid var(--border); padding: 1rem 1rem .75rem; flex-shrink: 0; }
+    #input-inner { max-width: 760px; margin: 0 auto; display: flex; gap: .5rem; align-items: flex-end; }
     #msg-input {
-      flex: 1;
-      resize: none;
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      padding: .7rem 1rem;
-      font-family: inherit;
-      font-size: .95rem;
-      line-height: 1.5;
-      max-height: 200px;
-      outline: none;
-      overflow-y: auto;
-      background: var(--input-bg);
-      color: var(--text);
+      flex: 1; resize: none; border: 1px solid var(--border); border-radius: 12px;
+      padding: .7rem 1rem; font-family: inherit; font-size: .95rem; line-height: 1.5;
+      max-height: 200px; outline: none; overflow-y: auto;
+      background: var(--surface); color: var(--text);
       transition: border-color .15s, box-shadow .15s;
     }
-    #msg-input:focus {
-      border-color: #7c3aed;
-      box-shadow: 0 0 0 3px rgba(124,58,237,.12);
-    }
+    #msg-input::placeholder { color: var(--text-faint); }
+    #msg-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
     #send-btn {
-      width: 40px; height: 40px;
-      border-radius: 10px;
-      border: none;
-      background: #7c3aed;
-      color: #fff;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
+      width: 44px; height: 44px; border-radius: 10px; border: none;
+      background: var(--accent); color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
       transition: background .15s, transform .1s;
     }
-    #send-btn:hover:not(:disabled) { background: #6d28d9; }
+    #send-btn:hover:not(:disabled) { background: var(--accent-hover); }
     #send-btn:active:not(:disabled) { transform: scale(.95); }
-    #send-btn:disabled { background: #c4b5fd; cursor: not-allowed; }
+    #send-btn:disabled { background: var(--text-faint); cursor: not-allowed; }
     #send-btn svg { width: 18px; height: 18px; }
 
-    #input-meta {
-      max-width: 1100px;
-      margin: .35rem auto 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+    #input-meta { max-width: 760px; margin: .35rem auto 0; display: flex; justify-content: space-between; align-items: center; }
     .hint { font-size: .78rem; color: var(--text-faint); }
+    .hint kbd { font: 11px ui-monospace, "Cascadia Mono", monospace; border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; background: var(--surface); color: var(--text-muted); }
     #char-count { font-size: .75rem; color: var(--text-faint); transition: color .15s; }
-    #char-count.warn { color: #f59e0b; }
+    #char-count.warn { color: var(--status-warn); }
 
     /* ── Token usage badge ───────────────────────────────────────── */
-    .token-usage {
-      margin-top: .4rem;
-      font-size: .73rem;
-      color: var(--text-faint);
-      display: flex;
-      gap: .5rem;
-    }
-    .token-usage span {
-      background: var(--code-bg);
-      border-radius: 4px;
-      padding: .15rem .45rem;
-    }
-
-    /* ── Sources citations panel ─────────────────────────────────── */
-    .sources-panel {
-      margin-top: .75rem;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: .8rem;
-      color: var(--text-muted);
-      overflow: hidden;
-    }
-    .sources-panel summary {
-      padding: .45rem .75rem;
-      background: var(--table-head);
-      cursor: pointer;
-      font-weight: 600;
-      user-select: none;
-      list-style: none;
-      display: flex;
-      align-items: center;
-      gap: .4rem;
-    }
-    .sources-panel summary::-webkit-details-marker { display: none; }
-    .sources-panel summary::before {
-      content: '▶';
-      font-size: .65rem;
-      transition: transform .15s;
-    }
-    .sources-panel[open] summary::before { transform: rotate(90deg); }
-    .sources-list {
-      padding: .5rem .75rem;
-      display: flex;
-      flex-direction: column;
-      gap: .5rem;
-    }
-    .source-item { line-height: 1.5; }
-    .source-item strong { color: #374151; }
-    .source-link { color: #374151; font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--border); transition: color .15s, border-color .15s; }
-    .source-link:hover { color: #4361ee; border-bottom-color: #4361ee; }
-    .source-excerpt { color: var(--text-faint); display: block; }
+    .token-usage { margin-top: .4rem; font-size: .73rem; color: var(--text-faint); display: flex; gap: .5rem; }
+    .token-usage span { background: var(--code-bg); border-radius: 4px; padding: .15rem .45rem; }
 
     /* ── Inline PDF button inside bubble ────────────────────────── */
     .bubble-pdf-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: .35rem;
-      margin-top: .85rem;
-      font-size: .78rem;
-      color: var(--text-muted);
-      background: var(--code-bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: .3rem .7rem;
-      cursor: pointer;
-      transition: background .15s, color .15s, border-color .15s;
+      display: inline-flex; align-items: center; gap: .35rem; margin-top: .85rem;
+      font-size: .78rem; color: var(--text-muted); background: var(--code-bg);
+      border: 1px solid var(--border); border-radius: 6px; padding: .3rem .7rem;
+      cursor: pointer; transition: background .15s, color .15s, border-color .15s;
     }
-    .bubble-pdf-btn:hover { background: var(--border); color: #374151; }
+    .bubble-pdf-btn:hover { background: var(--border); color: var(--text); }
     .bubble-pdf-btn svg { width: 12px; height: 12px; }
 
-    /* ── Credit exhausted banner ─────────────────────────────────── */
+    /* ── Credit exhausted / error banners ─────────────────────────── */
     .credit-exhausted-banner {
-      display: flex;
-      flex-direction: column;
-      gap: .45rem;
-      background: #fffbeb;
-      border: 1.5px solid #f59e0b;
-      border-radius: 10px;
-      padding: .85rem 1.1rem;
-      font-size: .9rem;
-      color: #92400e;
-      max-width: 88%;
+      display: flex; flex-direction: column; gap: .45rem;
+      background: color-mix(in srgb, var(--status-warn) 12%, var(--surface));
+      border: 1px solid var(--status-warn); border-radius: 6px;
+      padding: .85rem 1.1rem; font-size: .9rem; color: var(--text); max-width: 100%;
     }
-    .credit-exhausted-banner strong { color: #78350f; font-size: .95rem; }
-    .credit-exhausted-banner a { color: #b45309; font-weight: 600; text-decoration: underline; }
-    .credit-exhausted-banner a:hover { color: #92400e; }
+    .credit-exhausted-banner strong { color: var(--status-warn); font-size: .95rem; }
+    .credit-exhausted-banner a { color: var(--accent); font-weight: 600; text-decoration: underline; }
 
     .error-banner {
-      background: #fee2e2;
-      border-left: 4px solid #dc2626;
-      border-radius: 6px;
-      padding: 1rem;
-      margin: .5rem 0;
-      display: flex;
-      flex-direction: column;
-      gap: .5rem;
+      background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+      border-left: 3px solid var(--danger); border-radius: 6px;
+      padding: 1rem; margin: .5rem 0; display: flex; flex-direction: column; gap: .5rem;
     }
-    [data-theme="dark"] .error-banner {
-      background: #7f1d1d;
-      border-left-color: #ef4444;
+    .error-banner strong { color: var(--danger); font-size: .95rem; }
+    .error-banner a { color: var(--accent); font-weight: 600; text-decoration: underline; }
+
+    /* ── Empty state ───────────────────────────────────────────────
+       Corpus count + example questions drawn from real ingested titles
+       (design-brief.md §8, §9) — the empty void becomes an invitation. */
+    .empty-state { text-align: center; padding: 3rem 1rem .5rem; }
+    .empty-state h2 { font-family: "Fraunces", Georgia, serif; font-weight: 560; font-size: 1.625rem; margin-bottom: .5rem; }
+    .empty-state p { color: var(--text-muted); }
+    .examples { display: flex; flex-wrap: wrap; gap: .625rem; justify-content: center; margin-top: 1.375rem; }
+    .examples button {
+      font: 14px/1.4 inherit; font-family: inherit; color: var(--text); background: var(--surface);
+      border: 1px solid var(--border); border-radius: 999px; padding: .5rem 1rem; cursor: pointer;
+      min-height: 44px;
     }
-    .error-banner strong { color: #7f1d1d; font-size: .95rem; }
-    [data-theme="dark"] .error-banner strong { color: #fecaca; }
-    .error-banner a { color: #b91c1c; font-weight: 600; text-decoration: underline; }
-    [data-theme="dark"] .error-banner a { color: #fca5a5; }
-    .error-banner a:hover { color: #991b1b; }
-    [data-theme="dark"] .error-banner a:hover { color: #f87171; }
+    .examples button:hover { border-color: var(--accent); color: var(--accent); }
 
   </style>
   </th:block>
@@ -348,26 +206,18 @@
 <!-- ── Chat column ─────────────────────────────────────────────────── -->
 <th:block layout:fragment="content">
 <div id="chat-wrap">
-    <div id="messages">
-      <div class="msg assistant">
-        <div class="bubble">
-          <p>Hello! I'm <strong>Papyrus</strong>, your document intelligence assistant.
-          Ask me anything about your ingested committee meeting documents, resolutions, or records.
-          I can help you find information, summarise content, and answer questions.</p>
-        </div>
-      </div>
-    </div>
+    <div id="messages"></div>
   </div>
 
   <div id="input-wrap">
     <div id="input-inner">
-      <textarea id="msg-input" rows="1" placeholder="Message Papyrus…"></textarea>
+      <textarea id="msg-input" rows="1" placeholder="Ask your library…" aria-label="Ask your library"></textarea>
       <button id="send-btn" onclick="sendMessage()" title="Send">
         <svg viewBox="0 0 16 16" fill="currentColor"><path d="M.5 1.163A1 1 0 0 1 1.97.28l12.868 6.837a1 1 0 0 1 0 1.766L1.969 15.72A1 1 0 0 1 .5 14.836V10.33a1 1 0 0 1 .816-.983L8.5 8 1.316 6.653A1 1 0 0 1 .5 5.67V1.163z"/></svg>
       </button>
     </div>
     <div id="input-meta">
-      <p class="hint">Press <kbd style="font-family:monospace;background:#f3f4f6;padding:.1em .4em;border-radius:4px;font-size:.9em">Enter</kbd> to send &nbsp;·&nbsp; <kbd style="font-family:monospace;background:#f3f4f6;padding:.1em .4em;border-radius:4px;font-size:.9em">Shift+Enter</kbd> for new line</p>
+      <p class="hint">Press <kbd>Enter</kbd> to send &nbsp;·&nbsp; <kbd>Shift+Enter</kbd> for new line</p>
       <span id="char-count">0</span>
     </div>
 </div>
@@ -382,12 +232,72 @@
   const chatWrap      = document.getElementById('chat-wrap');
   const charCount     = document.getElementById('char-count');
 
-  const GREETING = messagesEl.innerHTML; // save initial greeting HTML
+  let GREETING = '';
   const history = [];
   let streaming = false;
 
   const PDF_KEYWORDS = /\b(pdf|print|printable|download|export)\b/i;
   function wantsPdf(text) { return PDF_KEYWORDS.test(text); }
+
+  // ── Empty state: corpus count + example questions from real titles ──
+  // Note: GET /api/documents?limit=500 undercounts past 500 docs — there is no
+  // dedicated corpus-count endpoint. Acceptable for now; flagged as a backend TODO.
+  function titleFromDoc(d) {
+    if (d.archiveFilename) {
+      const m = d.archiveFilename.match(/^(\d{4}-\d{2}-\d{2})-(.+?)(-p\d+)?$/);
+      if (m) return m[2].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      return d.archiveFilename.replace(/\.[^.]+$/, '');
+    }
+    return d.filename.replace(/\.[^.]+$/, '');
+  }
+
+  function exampleQuestions(titles) {
+    const templates = [
+      t => `What does ${t} say?`,
+      t => `Summarise ${t}.`,
+      t => `What can I learn from ${t}?`
+    ];
+    return titles.slice(0, 3).map((t, i) => templates[i % templates.length](t));
+  }
+
+  async function initEmptyState() {
+    let count = 0;
+    let examples = [
+      'What does the employee handbook say about annual leave?',
+      'Summarise the most recently ingested document.',
+      'What documents are in the library?'
+    ];
+    try {
+      const res = await fetch('/api/documents?limit=500');
+      if (res.ok) {
+        const docs = await res.json();
+        count = docs.length;
+        const titles = docs.filter(d => d.status === 'DONE').map(titleFromDoc);
+        if (titles.length >= 3) examples = exampleQuestions(titles);
+      }
+    } catch (_) { /* offline — fall back to generic copy below */ }
+
+    const countLine = count > 0
+      ? `Your library holds ${count} document${count === 1 ? '' : 's'}.`
+      : 'Your library is ready.';
+
+    messagesEl.innerHTML = `
+      <div class="msg assistant greeting">
+        <div class="empty-state">
+          <h2>${esc(countLine)}</h2>
+          <p>Ask about any of them — answers cite their sources.</p>
+          <div class="examples">
+            ${examples.map(q => `<button type="button" onclick="askExample(this)">${esc(q)}</button>`).join('')}
+          </div>
+        </div>
+      </div>`;
+    GREETING = messagesEl.innerHTML;
+  }
+
+  function askExample(btn) {
+    inputEl.value = btn.textContent;
+    sendMessage();
+  }
 
   // ── New Conversation ─────────────────────────────────────────────
   function newConversation() {
@@ -497,8 +407,8 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 @page{size:A4;margin:2.2cm 2.5cm 2.8cm;@bottom-right{content:"Page " counter(page) " of " counter(pages);font-size:8pt;color:#9ca3af}}
 body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:10.5pt;line-height:1.7;color:#111827;background:#fff}
-header{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:.75rem;margin-bottom:1.5rem;border-bottom:2px solid #1a1a2e}
-header .brand{font-size:16pt;font-weight:700;letter-spacing:.04em;color:#1a1a2e}
+header{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:.75rem;margin-bottom:1.5rem;border-bottom:2px solid #241F19}
+header .brand{font-size:16pt;font-weight:700;letter-spacing:.04em;color:#241F19}
 header .meta{font-size:8.5pt;color:#6b7280;text-align:right;line-height:1.5}
 .content p{margin-bottom:.65em}.content p:last-child{margin-bottom:0}
 .content h1{font-size:14pt;font-weight:700;margin:1em 0 .4em}
@@ -602,7 +512,7 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
           } else if (evtName === 'usage') {
             try { usageData = JSON.parse(rawData); } catch (_) {}
           } else if (evtName === 'error') {
-            bubble.innerHTML = `<span style="color:#dc2626">Error: ${esc(JSON.parse(rawData))}</span>`;
+            bubble.innerHTML = `<span style="color:var(--danger)">Error: ${esc(JSON.parse(rawData))}</span>`;
             history.pop(); return;
           } else if (evtName === 'credit_exhausted') {
             bubble.innerHTML = '';
@@ -633,7 +543,7 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
       if (needsPdf) addPdfButton(bubble);
       // Inject token usage badge
       if (usageData) injectUsage(bubble, usageData);
-      // Inject sources citations if present
+      // Inject sources as footnotes (the reskin's signature citation treatment)
       if (sourcesData.length > 0) injectSources(bubble, sourcesData);
       // Add timestamp above the bubble
       msgEl.insertBefore(makeTimestamp(), bubble);
@@ -641,7 +551,7 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
       history.push({ role: 'assistant', content: accumulated });
 
     } catch (err) {
-      bubble.innerHTML = `<span style="color:#dc2626">Network error: ${esc(err.message)}</span>`;
+      bubble.innerHTML = `<span style="color:var(--danger)">Network error: ${esc(err.message)}</span>`;
       history.pop();
     } finally {
       streaming = false;
@@ -651,10 +561,8 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
   }
 
   // ── Linkify inline source citations in rendered markdown ─────────
-  // Finds text nodes containing archive filenames (e.g. "Source: 1958-03-16-wmm-execomm")
-  // and wraps the filename portion in a clickable <a> link to the archived image.
   function linkifySourceCitations(bubble, sources) {
-    const fileMap = new Map(); // archiveFilename → imageUrl
+    const fileMap = new Map();
     sources.forEach(s => {
       if (s.sourceId && s.archiveFilename) {
         const url = `/api/documents/${s.sourceId}/file`;
@@ -663,11 +571,9 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
     });
     if (fileMap.size === 0) return;
 
-    // Build a single regex that matches any of the archive filenames
     const escaped = [...fileMap.keys()].map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
     const pattern = new RegExp('(' + escaped.join('|') + ')', 'g');
 
-    // Walk all text nodes inside the bubble
     const walker = document.createTreeWalker(bubble, NodeFilter.SHOW_TEXT);
     const textNodes = [];
     let node;
@@ -675,7 +581,7 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
 
     textNodes.forEach(textNode => {
       if (!pattern.test(textNode.nodeValue)) return;
-      pattern.lastIndex = 0; // reset after test()
+      pattern.lastIndex = 0;
 
       const parent = textNode.parentNode;
       const frag = document.createDocumentFragment();
@@ -710,37 +616,35 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
     bubble.appendChild(div);
   }
 
-  // ── Sources citations panel ──────────────────────────────────────
+  // ── Footnotes — hairline rule + small numbered entries ───────────
+  // Replaces the previous collapsible "Sources" panel; same underlying data
+  // (backend event contract unchanged) restyled per design-brief.md §9.
   function injectSources(bubble, sources) {
-    const details = document.createElement('details');
-    details.className = 'sources-panel';
-    const summary = document.createElement('summary');
-    summary.textContent = `Sources (${sources.length})`;
-    const list = document.createElement('div');
-    list.className = 'sources-list';
-    sources.forEach(s => {
-      const item = document.createElement('div');
-      item.className = 'source-item';
+    const div = document.createElement('div');
+    div.className = 'footnotes';
+    const hr = document.createElement('hr');
+    hr.className = 'fn-rule';
+    div.appendChild(hr);
+    const ul = document.createElement('ul');
+    sources.forEach((s, i) => {
+      const li = document.createElement('li');
       const label = formatSourceLabel(s.filename);
       const hasImage = s.sourceId && s.archiveFilename;
-      const imageUrl = hasImage
-        ? `/api/documents/${s.sourceId}/file`
-        : null;
+      const imageUrl = hasImage ? `/api/documents/${s.sourceId}/file` : null;
       const titleEl = hasImage
-        ? `<a href="${imageUrl}" target="_blank" rel="noopener" class="source-link">${esc(label)}</a>`
-        : `<strong>${esc(label)}</strong>`;
-      item.innerHTML = `${titleEl}<span class="source-excerpt">${esc(s.excerpt)}</span>`;
-      list.appendChild(item);
+        ? `<a href="${imageUrl}" target="_blank" rel="noopener">${esc(label)}</a>`
+        : `<span>${esc(label)}</span>`;
+      li.innerHTML = `${i + 1}&nbsp;&nbsp;${titleEl}`
+        + (s.excerpt ? `<span class="fn-excerpt">${esc(s.excerpt)}</span>` : '');
+      ul.appendChild(li);
     });
-    details.appendChild(summary);
-    details.appendChild(list);
-    bubble.appendChild(details);
+    div.appendChild(ul);
+    bubble.appendChild(div);
   }
 
   // ── Source label formatter ───────────────────────────────────────
   function formatSourceLabel(filename) {
     if (!filename) return filename;
-    // Match date prefix: YYYY-MM-DD
     const dateMatch = filename.match(/^(\d{4}-\d{2}-\d{2})-(.+?)(-p\d+)?$/);
     if (!dateMatch) return filename;
     const date = dateMatch[1];
@@ -755,7 +659,7 @@ footer{margin-top:2.5rem;padding-top:.6rem;border-top:1px solid #e5e7eb;font-siz
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  document.addEventListener('DOMContentLoaded', () => { inputEl.focus(); });
+  document.addEventListener('DOMContentLoaded', () => { initEmptyState(); inputEl.focus(); });
 </script>
 </body>
 </html>

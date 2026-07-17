@@ -6,116 +6,92 @@
 <head>
   <title>Papyrus — Ingest</title>
   <style layout:fragment="head">
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; }
-
-    :root {
-      --bg: #f7f7f8;
-      --surface: #ffffff;
-      --border: #e5e7eb;
-      --text: #1a1a1a;
-      --text-muted: #6b7280;
-      --text-faint: #9ca3af;
-      --code-bg: #f3f4f6;
-      --table-head: #f9fafb;
-      --input-bg: #ffffff;
-    }
-
-    [data-theme="dark"] {
-      --bg: #0f0f13;
-      --surface: #1c1c24;
-      --border: #2e2e3a;
-      --text: #e8e8f0;
-      --text-muted: #8888a8;
-      --text-faint: #55556a;
-      --code-bg: #1a1a24;
-      --table-head: #1a1a24;
-      --input-bg: #1c1c24;
-    }
-
-    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: row; }
-
-
-    /* ── Main ────────────────────────────────────────────────────── */
     #main { flex: 1; overflow-y: auto; min-width: 0; position: relative; }
 
-    /* ── Content ─────────────────────────────────────────────────── */
-    main { max-width: 760px; margin: 2rem auto; padding: 0 1.5rem; display: grid; gap: 1.5rem; }
+    main { max-width: 720px; margin: 2rem auto; padding: 0 1.5rem; display: grid; gap: 1.5rem; }
 
-    /* ── OCR comparison — full width ─────────────────────────────── */
-    #comparison-wrap {
-      display: none;
-      padding: 0 1.5rem 2rem;
-    }
+    #comparison-wrap { display: none; padding: 0 1.5rem 2rem; }
     #comparison-wrap.visible { display: block; }
 
-    section {
-      background: var(--surface); border-radius: 8px; padding: 1.5rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,.08);
-    }
+    h1 { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 1.6875rem; margin-bottom: 1.25rem; }
     h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text); }
 
     label { display: block; font-size: .85rem; margin-bottom: .4rem; color: var(--text-muted); }
-    input[type=file], select {
+    select {
       width: 100%; padding: .5rem .75rem; border: 1px solid var(--border);
       border-radius: 6px; font-size: .9rem; outline: none; transition: border-color .15s;
-      background: var(--input-bg); color: var(--text);
+      background: var(--surface); color: var(--text);
     }
-    select:focus { border-color: #4361ee; }
+    select:focus { border-color: var(--accent); }
 
     button {
-      background: #4361ee; color: #fff; border: none; border-radius: 6px;
-      padding: .5rem 1.2rem; font-size: .9rem; cursor: pointer; transition: background .15s;
+      background: var(--accent); color: #fff; border: none; border-radius: 8px;
+      padding: .6rem 1.25rem; font-size: .9rem; font-weight: 600; cursor: pointer; transition: background .15s;
+      min-height: 44px;
     }
-    button:hover { background: #3451d1; }
-    button:disabled { background: #a0aec0; cursor: not-allowed; }
-    .btn-success { background: #059669; }
-    .btn-success:hover { background: #047857; }
-    .btn-danger  { background: #dc2626; }
-    .btn-danger:hover  { background: #b91c1c; }
-    .btn-ghost  { background: #e5e7eb; color: #374151; }
-    .btn-ghost:hover  { background: #d1d5db; }
+    button:hover { background: var(--accent-hover); }
+    button:disabled { background: var(--text-faint); cursor: not-allowed; }
+    .btn-success { background: var(--status-success); }
+    .btn-success:hover { background: color-mix(in srgb, var(--status-success) 85%, black); }
+    .btn-danger  { background: var(--danger); }
+    .btn-danger:hover  { background: color-mix(in srgb, var(--danger) 85%, black); }
+    .btn-ghost  { background: none; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn-ghost:hover  { color: var(--text); border-color: var(--text-faint); }
 
     .btn-row { display: flex; gap: .6rem; align-items: center; margin-top: .75rem; flex-wrap: wrap; }
     .actions-row { display: flex; gap: .75rem; align-items: flex-end; }
 
     .status { font-size: .85rem; margin-top: .6rem; min-height: 1.2em; }
-    .ok  { color: #2d6a4f; }
-    .err { color: #c62828; }
+    .ok  { color: var(--status-success); }
+    .err { color: var(--danger); }
 
-    /* Steps */
-    .steps { display: flex; gap: 0; margin-bottom: 1.25rem; }
-    .step {
-      flex: 1; text-align: center; font-size: .8rem; padding: .4rem;
-      background: var(--table-head); color: var(--text-faint); border: 1px solid var(--border);
+    section {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 3px; padding: 1.5rem;
     }
-    .step:first-child { border-radius: 6px 0 0 6px; }
-    .step:last-child  { border-radius: 0 6px 6px 0; }
-    .step.active { background: #4361ee; color: #fff; border-color: #4361ee; font-weight: 600; }
-    .step.done   { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
 
-    /* Image preview */
+    /* ── Stepper — adopts the accent token (design-brief.md §9) ────── */
+    .steps { display: flex; gap: .5rem; margin-bottom: 1.25rem; }
+    .step {
+      flex: 1; text-align: center; font-size: .85rem; padding: .5625rem .5rem; border-radius: 7px;
+      border: 1px solid var(--border); color: var(--text-faint); background: var(--surface);
+    }
+    .step .n { font-family: "Fraunces", Georgia, serif; font-weight: 600; margin-right: .375rem; }
+    .step.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+    .step.done   { color: var(--text-muted); }
+
+    /* ── Drop zone — replaces the native Choose File control ───────── */
+    .dropzone {
+      border: 1.5px dashed var(--border); border-radius: 8px; background: var(--bg);
+      padding: 2.75rem 1.5rem; text-align: center; cursor: pointer;
+      transition: border-color .12s ease, background .12s ease;
+    }
+    .dropzone:hover, .dropzone:focus-visible { border-color: var(--text-faint); }
+    .dropzone svg { width: 28px; height: 28px; stroke: var(--text-faint); fill: none; stroke-width: 1.5; margin-bottom: .625rem; }
+    .dz-line { font-size: 1rem; color: var(--text); }
+    .dz-line .browse { color: var(--accent); font-weight: 500; text-decoration: none; }
+    .dz-line .browse:hover { text-decoration: underline; }
+    .dz-hint { font-size: .8125rem; color: var(--text-faint); margin-top: .5rem; }
+    .dropzone.dragover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--bg)); }
+    .dropzone.dragover svg { stroke: var(--accent); }
+    @media (prefers-reduced-motion: reduce) { .dropzone { transition: none; } }
+
     #image-preview { display: none; margin-top: .75rem; }
     #preview-img   { max-height: 150px; max-width: 100%; border-radius: 6px; border: 1px solid var(--border); display: block; }
 
-    /* Comparison panel */
     .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem; }
     .compare-pane { display: flex; flex-direction: column; gap: .5rem; }
     .compare-pane h3 { font-size: 1rem; font-weight: 600; color: var(--text); }
     .compare-pane img { width: 100%; border-radius: 6px; border: 1px solid var(--border); object-fit: contain; max-height: 85vh; background: var(--table-head); }
     .compare-pane embed { width: 100%; border-radius: 6px; border: 1px solid var(--border); height: 85vh; background: var(--table-head); }
 
-    /* Filename input */
     .filename-row { display: flex; align-items: center; gap: .6rem; margin-top: .5rem; }
     .filename-row label { font-size: .8rem; color: var(--text-muted); margin-bottom: 0; white-space: nowrap; flex-shrink: 0; }
     .filename-input {
-      width: 100%; padding: .45rem .75rem;
-      border: 1px solid var(--border); border-radius: 6px;
-      font-size: .85rem; font-family: monospace;
-      outline: none; transition: border-color .15s;
-      color: var(--text); background: var(--input-bg);
+      width: 100%; padding: .45rem .75rem; border: 1px solid var(--border); border-radius: 6px;
+      font-size: .85rem; font-family: ui-monospace, monospace; outline: none; transition: border-color .15s;
+      color: var(--text); background: var(--surface);
     }
-    .filename-input:focus { border-color: #4361ee; box-shadow: 0 0 0 3px rgba(67,97,238,.15); }
+    .filename-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
     .filename-input:disabled { background: var(--code-bg); color: var(--text-faint); }
     .ocr-text {
       flex: 1; background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px;
@@ -125,31 +101,25 @@
       font-family: inherit; color: var(--text); width: 100%;
       transition: border-color .15s, box-shadow .15s;
     }
-    .ocr-text:enabled { background: var(--input-bg); }
-    .ocr-text:enabled:focus {
-      outline: none; border-color: #4361ee;
-      box-shadow: 0 0 0 3px rgba(67,97,238,.15);
-    }
+    .ocr-text:enabled { background: var(--surface); }
+    .ocr-text:enabled:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
     .ocr-loading { color: var(--text-muted); font-style: italic; }
 
-    /* Progress bar */
     .progress-wrap { display: none; margin-top: .6rem; }
     .progress-wrap.visible { display: block; }
-    .progress-track { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; margin-bottom: .35rem; }
-    .progress-bar { height: 100%; background: #4361ee; border-radius: 99px; width: 0%; transition: width .4s ease; }
+    .progress-track { height: 4px; background: var(--border); border-radius: 99px; overflow: hidden; margin-bottom: .35rem; }
+    .progress-bar { height: 100%; background: var(--accent); border-radius: 99px; width: 0%; transition: width .4s ease; }
     .progress-label { font-size: .78rem; color: var(--text-muted); }
+    @media (prefers-reduced-motion: reduce) { .progress-bar { transition: none; } }
 
-    /* Drag overlay */
-    #drag-overlay {
-      display: none; position: fixed; inset: 0;
-      background: rgba(67,97,238,0.08); border: 3px dashed #4361ee;
-      border-radius: 12px; z-index: 100;
-      align-items: center; justify-content: center; flex-direction: column;
-      gap: .75rem; pointer-events: none;
-    }
-    #drag-overlay.active { display: flex; }
-    #drag-overlay svg { width: 48px; height: 48px; color: #4361ee; opacity: .7; }
-    #drag-overlay p { font-size: 1.1rem; font-weight: 600; color: #4361ee; }
+    /* ── Chunking options — collapsed, faint by default ─────────────── */
+    details.chunking-options { margin-top: .875rem; border-top: 1px solid var(--border); padding-top: .875rem; }
+    details.chunking-options summary { font-size: .875rem; color: var(--text-faint); cursor: pointer; }
+    details.chunking-options summary:hover { color: var(--text-muted); }
+    .chunking-inner { margin-top: .75rem; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .75rem; }
+    .chunking-inner label { font-size: .8rem; color: var(--text-muted); margin-bottom: .25rem; }
+    .chunking-inner select, .chunking-inner input { width: 100%; font-size: .85rem; padding: .4rem .6rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); }
+    #strategy-hint { margin: .6rem 0 0; font-size: .8rem; color: var(--text-muted); }
 
     @media (max-width: 700px) { .compare-grid { grid-template-columns: 1fr; } }
 
@@ -159,31 +129,30 @@
 
 <th:block layout:fragment="content">
 
-<!-- ── Drag overlay ─────────────────────────────────────────────────── -->
-<div id="drag-overlay">
-  <svg viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
-  <p>Drop file to ingest</p>
-</div>
-
 <main>
+
+    <h1>Ingest a document</h1>
 
     <!-- Upload -->
     <section>
-      <h2>Ingest Document</h2>
-      <div class="steps">
-        <div class="step active" id="step1-lbl">1 · Select</div>
-        <div class="step" id="step2-lbl">2 · Verify</div>
-        <div class="step" id="step3-lbl">3 · Save</div>
+      <div class="steps" aria-label="Progress">
+        <div class="step active" id="step1-lbl"><span class="n">1</span>Select</div>
+        <div class="step" id="step2-lbl"><span class="n">2</span>Verify</div>
+        <div class="step" id="step3-lbl"><span class="n">3</span>Save</div>
       </div>
       <div id="step1">
-        <label for="file-input">File (PDF, DOCX, TXT, HTML, MD, CSV, XLSX, PPTX, EPUB, PNG, JPG, TIFF… — max 100 MB)</label>
-        <input type="file" id="file-input"
+        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Add a document" onclick="document.getElementById('file-input').click()">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+          <p class="dz-line" id="dz-line">Drag a document here, or <a class="browse" href="#" onclick="event.stopPropagation()">browse</a></p>
+          <p class="dz-hint" id="dz-hint">PDF, DOCX, TXT, HTML, MD, CSV, XLSX, PPTX, EPUB, PNG, JPG, TIFF · up to 100 MB</p>
+        </div>
+        <input type="file" id="file-input" style="display:none"
           accept=".pdf,.docx,.txt,.html,.htm,.md,.csv,.xlsx,.pptx,.epub,.png,.jpg,.jpeg,.tiff,.tif,.bmp,.gif"
           onchange="onFileSelected(this)">
         <div id="image-preview"><img id="preview-img" alt="preview"></div>
         <div class="actions-row" style="margin-top:.75rem">
           <div style="flex:0 0 150px">
-            <label for="lang-input">Language</label>
+            <label for="lang-input">Document language</label>
             <select id="lang-input">
               <option value="eng">English</option>
               <option value="fra">French</option>
@@ -194,29 +163,29 @@
           <button id="extract-btn" onclick="extractPreview()" style="display:none">Extract &amp; Verify</button>
           <button id="direct-btn" onclick="uploadDirect()">Upload</button>
         </div>
-        <details id="chunking-options" style="margin-top:.75rem;border:1px solid #e5e7eb;border-radius:6px;padding:.6rem .9rem">
-          <summary style="cursor:pointer;font-weight:500;font-size:.9rem;color:#374151">Chunking options</summary>
-          <div style="margin-top:.75rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem">
+        <details class="chunking-options" id="chunking-options">
+          <summary>Chunking options</summary>
+          <div class="chunking-inner">
             <div>
-              <label for="chunking-strategy" style="font-size:.8rem;color:#6b7280;display:block;margin-bottom:.25rem">Strategy</label>
-              <select id="chunking-strategy" style="width:100%;font-size:.85rem" onchange="updateStrategyHint()">
+              <label for="chunking-strategy">Strategy</label>
+              <select id="chunking-strategy" onchange="updateStrategyHint()">
                 <option value="">Default (global config)</option>
-                <option value="PARAGRAPH">PARAGRAPH — minutes, agenda &amp; resolution docs</option>
-                <option value="SECTION">SECTION — single-column handbooks with numbered sections (100.05)</option>
-                <option value="SEMANTIC">SEMANTIC — two-column or densely formatted handbooks/reports</option>
-                <option value="FIXED">FIXED — unstructured or plain-text dumps</option>
+                <option value="PARAGRAPH">Paragraph — minutes, agenda &amp; resolution docs</option>
+                <option value="SECTION">Section — single-column handbooks with numbered sections (100.05)</option>
+                <option value="SEMANTIC">Semantic — two-column or densely formatted handbooks/reports</option>
+                <option value="FIXED">Fixed — unstructured or plain-text dumps</option>
               </select>
             </div>
             <div>
-              <label for="chunking-max-tokens" style="font-size:.8rem;color:#6b7280;display:block;margin-bottom:.25rem">Max tokens per chunk</label>
-              <input type="number" id="chunking-max-tokens" placeholder="default: 512" min="64" max="4096" style="width:100%;font-size:.85rem">
+              <label for="chunking-max-tokens">Max tokens per chunk</label>
+              <input type="number" id="chunking-max-tokens" placeholder="default: 512" min="64" max="4096">
             </div>
             <div>
-              <label for="chunking-overlap-tokens" style="font-size:.8rem;color:#6b7280;display:block;margin-bottom:.25rem">Overlap tokens</label>
-              <input type="number" id="chunking-overlap-tokens" placeholder="default: 64" min="0" max="512" style="width:100%;font-size:.85rem">
+              <label for="chunking-overlap-tokens">Overlap tokens</label>
+              <input type="number" id="chunking-overlap-tokens" placeholder="default: 64" min="0" max="512">
             </div>
           </div>
-          <p id="strategy-hint" style="margin:.6rem 0 0;font-size:.8rem;color:#6b7280"></p>
+          <p id="strategy-hint"></p>
         </details>
         <div id="upload-status" class="status"></div>
         <div id="progress-wrap" class="progress-wrap">
@@ -226,15 +195,13 @@
       </div>
     </section>
 
-    </section>
-
   </main>
 
   <!-- Step 2+3: OCR Comparison — full width -->
   <div id="comparison-wrap">
     <section id="comparison" style="padding:2rem">
-      <h2 style="font-size:1.2rem;margin-bottom:.4rem">OCR Verification</h2>
-      <p style="font-size:.9rem;color:#6b7280;margin-bottom:1rem">
+      <h2 style="font-size:1.2rem;margin-bottom:.4rem">Verify the extracted text</h2>
+      <p style="font-size:.9rem;color:var(--text-muted);margin-bottom:1rem">
         Check that the extracted text matches the image. Accept to save it, or discard to cancel.
       </p>
       <div class="compare-grid">
@@ -244,7 +211,7 @@
           <embed id="compare-embed" type="application/pdf" style="display:none">
         </div>
         <div class="compare-pane">
-          <h3>Extracted Text <span style="font-size:.8rem;font-weight:400;color:#6b7280">— editable</span></h3>
+          <h3>Extracted text <span style="font-size:.8rem;font-weight:400;color:var(--text-muted)">— editable</span></h3>
           <textarea id="compare-text" class="ocr-text ocr-loading" placeholder="Extracting text…" disabled>Extracting text…</textarea>
           <div class="filename-row">
             <label for="archive-filename">Filename</label>
@@ -252,7 +219,7 @@
           </div>
           <div class="btn-row" style="margin-top:.5rem;justify-content:flex-end">
             <span id="save-status" class="status" style="margin-top:0;flex:1;text-align:left"></span>
-            <button class="btn-success" id="accept-btn" onclick="acceptAndSave()" disabled>Accept &amp; Save</button>
+            <button class="btn-success" id="accept-btn" onclick="acceptAndSave()" disabled>Accept &amp; save</button>
             <button class="btn-ghost" onclick="discardPreview()">Discard</button>
           </div>
         </div>
@@ -278,15 +245,16 @@
   let currentIsPdf    = false;
   let pendingText     = null;
 
-  // ── Drag and drop ─────────────────────────────────────────────────
-  const overlay = document.getElementById('drag-overlay');
+  // ── Drag and drop — same underlying handling, restyled onto the drop zone
+  //    itself (dashed border / accent on dragover) instead of a full-page overlay.
+  const dropzone = document.getElementById('dropzone');
   let dragCounter = 0;
 
-  document.addEventListener('dragenter', e => { e.preventDefault(); dragCounter++; overlay.classList.add('active'); });
-  document.addEventListener('dragleave', () => { dragCounter--; if (dragCounter <= 0) { dragCounter = 0; overlay.classList.remove('active'); } });
-  document.addEventListener('dragover', e => e.preventDefault());
-  document.addEventListener('drop', e => {
-    e.preventDefault(); dragCounter = 0; overlay.classList.remove('active');
+  dropzone.addEventListener('dragenter', e => { e.preventDefault(); dragCounter++; dropzone.classList.add('dragover'); });
+  dropzone.addEventListener('dragleave', () => { dragCounter--; if (dragCounter <= 0) { dragCounter = 0; dropzone.classList.remove('dragover'); } });
+  dropzone.addEventListener('dragover', e => e.preventDefault());
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault(); e.stopPropagation(); dragCounter = 0; dropzone.classList.remove('dragover');
     const file = e.dataTransfer.files[0];
     if (!file) return;
     const ext = file.name.split('.').pop().toLowerCase();
@@ -304,6 +272,9 @@
     const input = document.getElementById('file-input');
     input.files = dt.files;
     onFileSelected(input);
+  });
+  dropzone.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById('file-input').click(); }
   });
 
   // ── File selected ─────────────────────────────────────────────────
@@ -333,11 +304,17 @@
       preview.style.display = 'none';
       img.src = '';
     }
+    document.getElementById('dz-line').innerHTML = `Selected <strong>${esc(currentFile.name)}</strong> — <a class="browse" href="#" onclick="event.stopPropagation();document.getElementById('file-input').click()">choose a different file</a>`;
+    document.getElementById('dz-hint').textContent = `${(currentFile.type || 'file')} · ${(currentFile.size / 1024 / 1024).toFixed(1)} MB`;
     document.getElementById('extract-btn').style.display = canPreview ? '' : 'none';
     document.getElementById('direct-btn').style.display  = canPreview ? 'none' : '';
     document.getElementById('comparison-wrap').classList.remove('visible');
     document.getElementById('upload-status').textContent = '';
     setStep(1);
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
   // ── Step 2: Extract & verify ──────────────────────────────────────
@@ -366,7 +343,7 @@
         embedEl.style.display  = '';
         imgEl.style.display    = 'none';
       } else {
-        labelEl.textContent   = 'Original Image';
+        labelEl.textContent   = 'Original image';
         imgEl.src             = currentFileUrl;
         imgEl.style.display   = '';
         embedEl.style.display = 'none';
@@ -381,7 +358,7 @@
       document.getElementById('comparison-wrap').classList.add('visible');
       panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       acceptBtn.disabled = false;
-      setStatus(status, 'Text extracted. Edit if needed, then Accept or Discard.', 'ok');
+      setStatus(status, 'Text extracted. Edit if needed, then accept or discard.', 'ok');
       setStep(2);
     } catch (e) {
       setStatus(status, `Network error: ${e.message}`, 'err');
@@ -441,7 +418,7 @@
 
   // ── Chunking options ─────────────────────────────────────────────
   const STRATEGY_HINTS = {
-    PARAGRAPH: 'Best for: committee minutes, agenda-structured documents. Raise max tokens to 800–1024 for long preamble/Whereas items.',
+    PARAGRAPH: 'Best for: committee minutes, agenda-structured documents. Raise max tokens to 800–1024 for long preamble/whereas items.',
     SECTION:   'Best for: single-column hierarchical handbooks with numbered section codes (e.g. 100.05, 300.55 style). Zero overlap recommended.',
     SEMANTIC:  'Best for: two-column or densely formatted documents (e.g. WMC-style handbooks) where paragraph breaks are unreliable after extraction.',
     FIXED:     'Best for: unstructured or poorly formatted text with no meaningful paragraph or section boundaries.'
@@ -510,7 +487,7 @@
           clearInterval(timer);
           progressBar.style.width = '100%';
           progressWrap.classList.remove('visible');
-          setStatus(statusEl, 'Ingested successfully!', 'ok');
+          setStatus(statusEl, 'Ingested successfully.', 'ok');
           onDone();
         } else if (job.status === 'FAILED') {
           clearInterval(timer);
@@ -527,6 +504,8 @@
     document.getElementById('file-input').value = '';
     document.getElementById('image-preview').style.display = 'none';
     document.getElementById('preview-img').src = '';
+    document.getElementById('dz-line').innerHTML = 'Drag a document here, or <a class="browse" href="#" onclick="event.stopPropagation()">browse</a>';
+    document.getElementById('dz-hint').textContent = 'PDF, DOCX, TXT, HTML, MD, CSV, XLSX, PPTX, EPUB, PNG, JPG, TIFF · up to 100 MB';
     document.getElementById('comparison-wrap').classList.remove('visible');
     document.getElementById('extract-btn').style.display = 'none';
     document.getElementById('direct-btn').style.display  = '';
