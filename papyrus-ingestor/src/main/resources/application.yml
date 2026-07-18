@@ -1,0 +1,28 @@
+# c-ingestor (ADR-009) — on-demand batch reingest CLI. Off by default; started manually
+# for a model switch. See development/reingest/reingest-model-switch-ip.md.
+
+ingestor:
+  # The embedding model to build a fresh papyrus_<model> database for. Must be a key in
+  # TargetModelResolver's registry (naming contract, ADR-009). Only 'voyage-3-lite' has a
+  # working EmbeddingService today.
+  target-model: ${TARGET_MODEL:voyage-3-lite}
+
+  db:
+    # Postgres server connection (same server as the serving app's DB, different database).
+    host: ${INGESTOR_DB_HOST:papyrus-pgvector}
+    port: ${INGESTOR_DB_PORT:5432}
+    # Server's default/admin database, used for CREATE DATABASE / pg_database checks.
+    admin-database: ${INGESTOR_DB_ADMIN_DATABASE:postgres}
+    # Deliberately separate from the serving app's DATABASE_USER/DATABASE_PASSWORD — this
+    # tool needs CREATE DATABASE privilege, the serving app does not.
+    admin-user: ${INGESTOR_DB_ADMIN_USER:papyrus}
+    admin-password: ${INGESTOR_DB_ADMIN_PASSWORD:}
+
+  # Filesystem archive volume mount. Unused by this task (P1.1/P1.2); reserved for the
+  # P1.3 reingest-from-archive loop.
+  archive-path: ${ARCHIVE_PATH:/data/papyrus/archive}
+
+logging:
+  level:
+    io.darqlab.papyrus.ingestor: INFO
+    org.flywaydb: INFO
