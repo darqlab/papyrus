@@ -3,6 +3,7 @@ package io.darqlab.papyrus.ingestor;
 import io.darqlab.papyrus.ingestor.config.IngestorProperties;
 import io.darqlab.papyrus.ingestor.db.DatabaseBootstrapper;
 import io.darqlab.papyrus.ingestor.model.TargetModelSpec;
+import io.darqlab.papyrus.ingestor.reingest.ReingestOrchestrator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -22,10 +23,9 @@ import org.springframework.context.ConfigurableApplicationContext;
  * its work once in {@link #run(String...)} and exits, so it can be started on-demand by
  * an operator (compose profile / manual {@code up}) and torn down when done.
  *
- * <p>Scope of this task (P1.1 + P1.2 of the reingest task list): module skeleton +
- * target-model resolution + per-model database bootstrap (create-if-absent, apply
- * schema). The actual reingest-from-archive loop is P1.3 and is stubbed below as a
- * clearly marked no-op.
+ * <p>Scope: P1.1 + P1.2 (module skeleton + target-model resolution + per-model database
+ * bootstrap: create-if-absent, apply schema) plus P1.3 (the reingest-from-archive loop,
+ * delegated to {@link ReingestOrchestrator}).
  *
  * <p>Excludes {@link DataSourceAutoConfiguration} / {@link HibernateJpaAutoConfiguration}:
  * this tool talks to <em>two different</em> Postgres databases per run (the admin/catalog
@@ -46,15 +46,18 @@ public class IngestorApplication implements CommandLineRunner, ExitCodeGenerator
     private final IngestorProperties properties;
     private final TargetModelResolver resolver;
     private final DatabaseBootstrapper bootstrapper;
+    private final ReingestOrchestrator orchestrator;
 
     private volatile int exitCode = 0;
 
     public IngestorApplication(IngestorProperties properties,
                                 TargetModelResolver resolver,
-                                DatabaseBootstrapper bootstrapper) {
+                                DatabaseBootstrapper bootstrapper,
+                                ReingestOrchestrator orchestrator) {
         this.properties = properties;
         this.resolver = resolver;
         this.bootstrapper = bootstrapper;
+        this.orchestrator = orchestrator;
     }
 
     public static void main(String[] args) {
@@ -76,15 +79,9 @@ public class IngestorApplication implements CommandLineRunner, ExitCodeGenerator
             bootstrapper.ensureDatabase(spec);
             bootstrapper.applySchema(spec);
 
-            // TODO(P1.3): reingest-from-archive loop. Enumerate document_sources, read each
-            // archived .txt from ARCHIVE_PATH ('{}' below), chunk + embed with the target
-            // model's EmbeddingService, write into papyrus_<model>, tracking progress in
-            // ingestion_jobs/document_sources. Not implemented in this task.
-            log.info("TODO(P1.3): reingest-from-archive loop not implemented yet (archivePath='{}'). "
-                    + "Schema bootstrap only in this run.", properties.archivePath());
+            orchestrator.run(spec);
 
-            log.info("=== Papyrus Ingestor finished successfully (schema bootstrap only; "
-                    + "reingest is P1.3) ===");
+            log.info("=== Papyrus Ingestor finished successfully ===");
         } catch (Exception e) {
             log.error("=== Papyrus Ingestor failed ===", e);
             exitCode = 1;

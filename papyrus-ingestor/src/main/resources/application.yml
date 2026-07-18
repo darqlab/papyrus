@@ -17,10 +17,20 @@ ingestor:
     # tool needs CREATE DATABASE privilege, the serving app does not.
     admin-user: ${INGESTOR_DB_ADMIN_USER:papyrus}
     admin-password: ${INGESTOR_DB_ADMIN_PASSWORD:}
+    # The live/serving app's database name (same Postgres server as above). Read-only
+    # enumerated by the P1.3 reingest loop to discover document_sources rows to rebuild.
+    # Default matches ${POSTGRES_DB:-papyrus} in docker-compose.yml.
+    source-database: ${INGESTOR_SOURCE_DATABASE:papyrus}
 
-  # Filesystem archive volume mount. Unused by this task (P1.1/P1.2); reserved for the
-  # P1.3 reingest-from-archive loop.
+  # Filesystem archive volume mount, read by the P1.3 reingest-from-archive loop.
   archive-path: ${ARCHIVE_PATH:/data/papyrus/archive}
+
+  # Voyage AI embedding credentials (P1.3) — same env vars as the serving app
+  # (papyrus-api's papyrus.embedding.voyage.*), since c-ingestor is a separate process
+  # that doesn't scan papyrus-pipeline's PapyrusProperties.
+  voyage:
+    api-key: ${VOYAGE_API_KEY:}
+    model: ${VOYAGE_MODEL:voyage-3-lite}
 
 logging:
   level:
