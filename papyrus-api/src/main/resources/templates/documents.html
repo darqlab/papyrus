@@ -2,205 +2,358 @@
 <html lang="en"
       layout:decorate="~{layout/default}"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      xmlns:th="http://www.thymeleaf.org">
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="https://www.thymeleaf.org/extras/springsecurity">
 <head>
   <title>Papyrus — Documents</title>
+  <!--
+    ADR-008: Manage merged into Documents (role-gated single page).
+    READER sees title / status / ingested date only.
+    CONTRIBUTOR/ADMIN additionally see: checkbox column, type filter, Re-ingest /
+    Re-ingest selected, Delete.
+    Deviation from the brief: the API's real RBAC restricts DELETE and
+    POST /api/documents/{id}/reingest to ROLE_ADMIN only (not CONTRIBUTOR+ADMIN as
+    design-brief.md §9 assumed) — the UI gates these to ADMIN to match the
+    server-side @PreAuthorize, which stays authoritative regardless.
+    Delete confirm copy omits the chunk count from the brief's example (§8) because
+    no chunk-count field exists on GET /api/documents — noted as a backend gap.
+  -->
   <style layout:fragment="head">
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; }
-
-    :root {
-      --bg: #f7f7f8;
-      --surface: #ffffff;
-      --border: #e5e7eb;
-      --text: #1a1a1a;
-      --text-muted: #6b7280;
-      --text-faint: #9ca3af;
-      --code-bg: #f3f4f6;
-      --table-head: #f9fafb;
-      --input-bg: #ffffff;
-    }
-
-    [data-theme="dark"] {
-      --bg: #0f0f13;
-      --surface: #1c1c24;
-      --border: #2e2e3a;
-      --text: #e8e8f0;
-      --text-muted: #8888a8;
-      --text-faint: #55556a;
-      --code-bg: #1a1a24;
-      --table-head: #1a1a24;
-      --input-bg: #1c1c24;
-    }
-
-    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: row; }
-
-
-    /* ── Main ────────────────────────────────────────────────────── */
     #main { flex: 1; overflow-y: auto; min-width: 0; }
 
-    /* ── Content ─────────────────────────────────────────────────── */
-    main { max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; }
+    .pp-page { max-width: 1280px; margin: 0 auto; padding: 2rem; }
+    .pp-page-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .pp-page-head h1 { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 1.6875rem; }
+    .pp-count { font-size: .875rem; color: var(--text-muted); }
 
-    section {
-      background: var(--surface); border-radius: 8px; padding: 1.5rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    .pp-toolbar { display: flex; gap: .625rem; margin-bottom: .875rem; flex-wrap: wrap; align-items: center; }
+    .pp-toolbar input[type="search"] {
+      flex: 1; min-width: 200px; max-width: 420px; font: inherit; color: var(--text); background: var(--surface);
+      border: 1px solid var(--border); border-radius: 8px; padding: .5625rem .75rem;
     }
+    .pp-toolbar input::placeholder { color: var(--text-faint); }
+    .pp-toolbar input:focus { border-color: var(--accent); outline: none; }
+    .pp-toolbar select { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .5625rem .625rem; }
+    .pp-toolbar .pp-bulk { margin-left: auto; }
 
-    .section-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 1rem; flex-wrap: wrap; gap: .5rem;
+    .pp-toast-area { position: fixed; bottom: 1.5rem; right: 1.5rem; display: flex; flex-direction: column; gap: .5rem; z-index: 100; }
+    .pp-toast {
+      background: var(--surface); color: var(--text); padding: .65rem 1rem; border-radius: 8px;
+      font-size: .85rem; min-width: 260px; border: 1px solid var(--border);
     }
-    .section-header h2 { font-size: 1rem; font-weight: 600; color: var(--text); }
+    .pp-toast.toast-ok  { border-left: 3px solid var(--status-success); }
+    .pp-toast.toast-err { border-left: 3px solid var(--danger); }
+    .pp-toast.toast-run { border-left: 3px solid var(--status-warn); }
 
-    button {
-      background: #4361ee; color: #fff; border: none; border-radius: 6px;
-      padding: .5rem 1.2rem; font-size: .9rem; cursor: pointer; transition: background .15s;
+    @media (max-width: 640px) {
+      .pp-page { padding: 1rem; }
+      .pp-actions .pp-btn { opacity: 1; } /* no hover on touch — actions stay visible */
     }
-    button:hover { background: #3451d1; }
-    button:disabled { background: #a0aec0; cursor: not-allowed; }
-    .btn-sm { font-size: .8rem; padding: .3rem .75rem; }
-    .btn-danger { background: #dc2626; }
-    .btn-danger:hover { background: #b91c1c; }
-
-    /* Filter row */
-    .docs-filter {
-      display: flex; gap: .5rem; margin-bottom: .75rem; align-items: center;
-    }
-    .docs-filter input[type=search] {
-      flex: 1; padding: .4rem .7rem; border: 1px solid var(--border);
-      border-radius: 6px; font-size: .875rem; outline: none; transition: border-color .15s;
-      background: var(--input-bg); color: var(--text);
-    }
-    .docs-filter input[type=search]:focus { border-color: #4361ee; }
-    .docs-filter select {
-      padding: .4rem .6rem; border: 1px solid var(--border);
-      border-radius: 6px; font-size: .875rem; outline: none; transition: border-color .15s;
-      background: var(--input-bg); color: var(--text);
-    }
-    .docs-filter select:focus { border-color: #4361ee; }
-
-    /* Table */
-    table { width: 100%; border-collapse: collapse; font-size: .875rem; }
-    th { text-align: left; padding: .55rem .75rem; background: var(--table-head); font-weight: 600; border-bottom: 2px solid var(--border); color: var(--text-muted); }
-    td { padding: .55rem .75rem; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--text); }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: var(--code-bg); }
-
-    .badge { display: inline-block; padding: .2em .6em; border-radius: 4px; font-size: .75rem; font-weight: 600; }
-    .badge-done   { background: #d1fae5; color: #065f46; }
-    .badge-failed { background: #fee2e2; color: #991b1b; }
-    .badge-other  { background: #e0e7ff; color: #3730a3; }
-
-    .empty { color: var(--text-faint); font-size: .875rem; padding: .75rem 0; }
-
-
   </style>
 </head>
 <body>
 
 <th:block layout:fragment="content">
-<main>
-    <section>
-      <div class="section-header">
-        <h2>Ingested Documents</h2>
-        <button class="btn-sm" onclick="loadDocs()">Refresh</button>
-      </div>
-      <div class="docs-filter">
-        <input type="search" id="filter-name" placeholder="Search by filename…" oninput="filterDocs()">
-        <select id="filter-status" onchange="filterDocs()">
-          <option value="">All statuses</option>
-          <option value="DONE">Done</option>
-          <option value="FAILED">Failed</option>
-          <option value="PROCESSING">Processing</option>
-        </select>
-      </div>
-      <div id="docs-table"><p class="empty">Loading…</p></div>
-    </section>
-  </main>
+<!-- Server-rendered role marker: JS reads presence of this element to decide
+     whether to render the admin-only affordances (checkbox column, filters,
+     re-ingest, delete). Server-side @PreAuthorize on the API is authoritative;
+     this is cosmetic gating only, per ADR-008 risk mitigation. -->
+<div id="pp-role-admin" sec:authorize="hasRole('ADMIN')" style="display:none"></div>
+
+<div class="pp-page">
+  <div class="pp-page-head">
+    <h1>Documents</h1>
+    <span class="pp-count" id="pp-count"></span>
+  </div>
+
+  <div class="pp-toolbar">
+    <input type="search" id="pp-filter-search" placeholder="Search by title or filename…" aria-label="Search documents">
+    <select id="pp-filter-type" aria-label="Filter by type" style="display:none">
+      <option value="">All types</option>
+      <option value="image">Image</option>
+      <option value="pdf">PDF</option>
+      <option value="docx">DOCX</option>
+      <option value="pptx">PPTX</option>
+      <option value="other">Other</option>
+    </select>
+    <select id="pp-filter-status" aria-label="Filter by status">
+      <option value="">All statuses</option>
+      <option value="DONE">Done</option>
+      <option value="PROCESSING">Processing</option>
+      <option value="FAILED">Failed</option>
+    </select>
+    <button class="pp-btn pp-btn-quiet pp-bulk" id="pp-reingest-selected" type="button" style="display:none" disabled>Re-ingest selected</button>
+  </div>
+
+  <div class="pp-card">
+    <table class="pp-table" id="pp-table" style="display:none">
+      <thead>
+        <tr id="pp-thead-row">
+          <th class="pp-chk" style="display:none"><input type="checkbox" id="pp-chk-all" aria-label="Select all"></th>
+          <th>Title</th>
+          <th>File</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Ingested</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="pp-tbody"></tbody>
+    </table>
+    <div class="pp-empty" id="pp-loading"><p>Loading…</p></div>
+  </div>
+</div>
+
+<div class="pp-toast-area" id="pp-toast-area"></div>
 </th:block>
 
 <script layout:fragment="scripts">
-  const api = '';
-  let allDocs = [];
+  const isAdmin = !!document.getElementById('pp-role-admin');
 
+  let allDocs = [];
+  let filtered = [];
+  const IMAGE_TYPES = ['image/png','image/jpeg','image/jpg','image/tiff','image/bmp','image/gif'];
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fileTypeLabel(contentType, filename) {
+    if (!contentType) return 'unknown';
+    if (IMAGE_TYPES.includes(contentType)) return 'Image';
+    if (contentType === 'application/pdf') return 'PDF';
+    if (contentType.includes('wordprocessing')) return 'DOCX';
+    if (contentType.includes('presentation')) return 'PPTX';
+    if (contentType.includes('spreadsheet')) return 'XLSX';
+    if (contentType === 'text/plain') return 'TXT';
+    const ext = (filename || '').split('.').pop().toUpperCase();
+    return ext || 'File';
+  }
+
+  function fileTypeCategory(contentType) {
+    if (IMAGE_TYPES.includes(contentType)) return 'image';
+    if (contentType === 'application/pdf') return 'pdf';
+    if (contentType && contentType.includes('wordprocessing')) return 'docx';
+    if (contentType && contentType.includes('presentation')) return 'pptx';
+    return 'other';
+  }
+
+  // Title (human-readable) parsed from archiveFilename the same way manage.html's
+  // formatArchiveLabel() did — reused here so titles read the same across the merge.
+  function formatTitle(d) {
+    if (d.archiveFilename) {
+      const m = d.archiveFilename.match(/^(\d{4}-\d{2}-\d{2})-(.+?)(-p\d+)?$/);
+      if (m) {
+        const slug = m[2].replace(/-/g, ' ');
+        return slug.replace(/\b\w/g, c => c.toUpperCase());
+      }
+      return d.archiveFilename.replace(/\.[^.]+$/, '');
+    }
+    return d.filename.replace(/\.[^.]+$/, '');
+  }
+
+  // One-line date format per design-brief.md §9: "Jul 17, 2026 · 8:29 AM"
+  function formatWhen(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const date = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    return `${date} · ${time}`;
+  }
+
+  function statusCell(status) {
+    // DONE collapses to a quiet check + verdigris text; FAILED/PROCESSING keep
+    // icon + color — status never conveyed by color alone (design-brief.md §6, §10).
+    if (status === 'DONE') return `<span class="pp-status st-done"><span class="glyph">✓</span>Done</span>`;
+    if (status === 'FAILED') return `<span class="pp-status st-failed"><span class="glyph">✕</span>Failed</span>`;
+    if (status === 'PROCESSING') return `<span class="pp-status st-processing"><span class="glyph">◌</span>Processing</span>`;
+    return `<span class="pp-status">${esc(status)}</span>`;
+  }
 
   async function loadDocs() {
-    const container = document.getElementById('docs-table');
+    document.getElementById('pp-loading').innerHTML = '<p>Loading…</p>';
+    document.getElementById('pp-loading').style.display = '';
+    document.getElementById('pp-table').style.display = 'none';
     try {
-      const res = await fetch(`${api}/api/documents?limit=200`);
-      allDocs   = await res.json();
-      filterDocs();
+      const res = await fetch('/api/documents?limit=500');
+      allDocs = await res.json();
+      applyFilter();
     } catch (e) {
-      container.innerHTML = `<p class="empty" style="color:#c62828">Failed to load: ${esc(e.message)}</p>`;
+      document.getElementById('pp-loading').innerHTML = `<p style="color:var(--danger)">Failed to load: ${esc(e.message)}</p>`;
     }
   }
 
-  function filterDocs() {
-    const nameQ   = document.getElementById('filter-name').value.toLowerCase();
-    const statusQ = document.getElementById('filter-status').value;
-    const filtered = allDocs.filter(d => {
-      const matchName   = !nameQ   || d.filename.toLowerCase().includes(nameQ);
-      const matchStatus = !statusQ || d.status === statusQ;
-      return matchName && matchStatus;
+  function applyFilter() {
+    const search = document.getElementById('pp-filter-search').value.toLowerCase();
+    const status = document.getElementById('pp-filter-status').value;
+    const type = isAdmin ? document.getElementById('pp-filter-type').value : '';
+
+    filtered = allDocs.filter(d => {
+      if (status && d.status !== status) return false;
+      if (type && fileTypeCategory(d.contentType) !== type) return false;
+      if (search) {
+        const hay = (d.filename + ' ' + formatTitle(d)).toLowerCase();
+        if (!hay.includes(search)) return false;
+      }
+      return true;
     });
-    renderDocs(filtered);
+
+    document.getElementById('pp-count').textContent =
+      `${filtered.length} of ${allDocs.length} document${allDocs.length !== 1 ? 's' : ''}`;
+    render();
   }
 
-  function renderDocs(docs) {
-    const container = document.getElementById('docs-table');
-    if (!docs.length) {
-      container.innerHTML = allDocs.length
-        ? '<p class="empty">No documents match the filter.</p>'
-        : '<p class="empty">No documents ingested yet. <a href="/ingest" style="color:#4361ee">Upload one →</a></p>';
+  function render() {
+    const loading = document.getElementById('pp-loading');
+    const table = document.getElementById('pp-table');
+    const tbody = document.getElementById('pp-tbody');
+
+    if (allDocs.length === 0) {
+      table.style.display = 'none';
+      loading.style.display = '';
+      loading.innerHTML = '<h2>Nothing ingested yet.</h2><p>Add your first document from the <a href="/ingest">Ingest</a> page.</p>';
       return;
     }
-    container.innerHTML = `
-      <table>
-        <thead><tr>
-          <th>Filename</th><th>Type</th><th>Status</th><th>Ingested</th><th></th>
-        </tr></thead>
-        <tbody>
-          ${docs.map(d => `<tr id="doc-row-${d.id}">
-            <td>${esc(d.filename)}</td>
-            <td><small style="color:#6b7280">${esc(d.contentType)}</small></td>
-            <td>${badge(d.status)}</td>
-            <td><small style="color:#6b7280">${new Date(d.createdAt).toLocaleString()}</small></td>
-            <td style="text-align:right">
-              <button class="btn-sm btn-danger" onclick="deleteDoc('${d.id}','${esc(d.filename)}')">Delete</button>
-            </td>
-          </tr>`).join('')}
-        </tbody>
-      </table>`;
+    if (filtered.length === 0) {
+      table.style.display = 'none';
+      loading.style.display = '';
+      loading.innerHTML = '<p>No documents match the filter.</p>';
+      return;
+    }
+
+    loading.style.display = 'none';
+    table.style.display = '';
+
+    tbody.innerHTML = filtered.map(d => {
+      const title = esc(formatTitle(d));
+      const canReingest = isAdmin && !!d.archiveFilename;
+      const fileUrl = d.archiveFilename ? `/api/documents/${d.id}/file` : null;
+
+      const titleCell = fileUrl
+        ? `<a href="${fileUrl}" target="_blank" rel="noopener">${title}</a>`
+        : title;
+
+      const actions = isAdmin ? `
+        <button class="pp-btn pp-btn-quiet" type="button" ${canReingest ? '' : 'disabled'} onclick="reingestOne('${d.id}', '${title.replace(/'/g,"\\'")}')">Re-ingest</button>
+        <button class="pp-btn pp-btn-danger" type="button" onclick="confirmDelete('${d.id}', '${title.replace(/'/g,"\\'")}')">Delete</button>
+      ` : '';
+
+      return `<tr data-id="${d.id}">
+        ${isAdmin ? `<td class="pp-chk"><input type="checkbox" class="pp-row-chk" data-id="${d.id}" ${canReingest ? '' : 'disabled'} aria-label="Select ${title}" onchange="updateSelCount()"></td>` : ''}
+        <td class="pp-title">${titleCell}</td>
+        <td class="pp-slug">${esc(d.filename)}</td>
+        <td class="pp-mime">${esc(fileTypeLabel(d.contentType, d.filename))}</td>
+        <td>${statusCell(d.status)}</td>
+        <td class="pp-when">${formatWhen(d.createdAt)}</td>
+        <td class="pp-actions">${actions}</td>
+      </tr>`;
+    }).join('');
   }
 
-  async function deleteDoc(id, filename) {
-    if (!confirm(`Delete "${filename}"?\nThis will permanently remove the document and all its chunks.`)) return;
+  // ── Role-gated setup ──────────────────────────────────────────────
+  if (isAdmin) {
+    document.querySelectorAll('.pp-chk').forEach(el => el.style.display = '');
+    document.getElementById('pp-filter-type').style.display = '';
+    document.getElementById('pp-reingest-selected').style.display = '';
+  }
+
+  document.getElementById('pp-filter-search').addEventListener('input', applyFilter);
+  document.getElementById('pp-filter-status').addEventListener('change', applyFilter);
+  if (isAdmin) {
+    document.getElementById('pp-filter-type').addEventListener('change', applyFilter);
+    document.getElementById('pp-chk-all').addEventListener('change', function () {
+      document.querySelectorAll('.pp-row-chk:not(:disabled)').forEach(c => c.checked = this.checked);
+      updateSelCount();
+    });
+    document.getElementById('pp-reingest-selected').addEventListener('click', reingestSelected);
+  }
+
+  function updateSelCount() {
+    const selected = [...document.querySelectorAll('.pp-row-chk:checked')];
+    const btn = document.getElementById('pp-reingest-selected');
+    if (btn) btn.disabled = selected.length === 0;
+  }
+
+  // ── Delete (ADMIN only server-side; UI gated to match) ────────────
+  function confirmDelete(id, title) {
+    // Delete confirm copy per design-brief.md §8, minus the chunk count — no
+    // chunk-count field exists on GET /api/documents (backend gap, not invented here).
+    if (!confirm(`Remove "${title}"? This can't be undone.`)) return;
+    deleteDoc(id);
+  }
+
+  async function deleteDoc(id) {
     try {
-      const res = await fetch(`${api}/api/documents/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' });
       if (res.status === 204) {
         allDocs = allDocs.filter(d => d.id !== id);
-        const row = document.getElementById(`doc-row-${id}`);
-        if (row) row.remove();
-        if (!document.querySelector('#docs-table tr[id^="doc-row-"]')) filterDocs();
+        applyFilter();
       } else {
-        alert(`Failed to delete (HTTP ${res.status})`);
+        showToast(`Failed to delete (HTTP ${res.status})`, 'err');
       }
     } catch (e) {
-      alert(`Network error: ${e.message}`);
+      showToast(`Network error: ${e.message}`, 'err');
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => { loadDocs(); });
-
-  function badge(s) {
-    const cls = s === 'DONE' ? 'badge-done' : s === 'FAILED' ? 'badge-failed' : 'badge-other';
-    return `<span class="badge ${cls}">${s}</span>`;
+  // ── Re-ingest ──────────────────────────────────────────────────────
+  async function reingestOne(id, title) {
+    try {
+      const res = await fetch(`/api/documents/${id}/reingest`, { method: 'POST' });
+      if (!res.ok) { showToast(`Re-ingest failed (${res.status})`, 'err'); return; }
+      const job = await res.json();
+      showToast(`Re-ingesting ${title}…`, 'run');
+      pollJob(job.jobId, title);
+    } catch (e) {
+      showToast(`Error: ${e.message}`, 'err');
+    }
   }
-  function esc(s) {
-    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  async function reingestSelected() {
+    const ids = [...document.querySelectorAll('.pp-row-chk:checked')].map(c => c.dataset.id);
+    for (const id of ids) {
+      const doc = allDocs.find(d => d.id === id);
+      await reingestOne(id, doc ? formatTitle(doc) : id);
+      await new Promise(r => setTimeout(r, 150));
+    }
+    document.querySelectorAll('.pp-row-chk').forEach(c => c.checked = false);
+    document.getElementById('pp-chk-all').checked = false;
+    updateSelCount();
   }
 
+  async function pollJob(jobId, title) {
+    let attempts = 0;
+    while (attempts++ < 120) {
+      await new Promise(r => setTimeout(r, 2000));
+      try {
+        const res = await fetch(`/api/jobs/${jobId}`);
+        if (!res.ok) continue;
+        const job = await res.json();
+        if (job.status === 'DONE') {
+          showToast(`Re-ingested: ${title}`, 'ok');
+          await loadDocs();
+          return;
+        }
+        if (job.status === 'FAILED') {
+          showToast(`Re-ingest failed: ${title}`, 'err');
+          await loadDocs();
+          return;
+        }
+      } catch (_) {}
+    }
+    showToast(`Re-ingest timed out: ${title}`, 'err');
+  }
+
+  function showToast(msg, type) {
+    const area = document.getElementById('pp-toast-area');
+    const el = document.createElement('div');
+    el.className = `pp-toast toast-${type}`;
+    el.textContent = msg;
+    area.appendChild(el);
+    setTimeout(() => el.remove(), type === 'run' ? 8000 : 4000);
+  }
+
+  document.addEventListener('DOMContentLoaded', loadDocs);
 </script>
 </body>
 </html>

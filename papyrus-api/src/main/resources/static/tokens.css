@@ -1,0 +1,166 @@
+/*
+ * Papyrus design tokens — "quiet digital reading room"
+ * Source of truth: devops/projects/papyrus/development/design-brief.md (v1.1), §6.
+ *
+ * Single shared token set for every page. Do NOT redeclare --bg/--surface/etc.
+ * per-page — that duplication is exactly the drift this file exists to fix.
+ * Extend this file (new tokens) rather than overriding values locally.
+ */
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("/fonts/fraunces-var-latin.woff2") format("woff2");
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Light — "Paper" (default) */
+  --bg: #FAF7F1;            /* Paper */
+  --surface: #FFFDF8;       /* Vellum */
+  --border: #E7E0D2;        /* Deckle */
+  --text: #2A251F;          /* Iron-gall */
+  --text-muted: #71685A;    /* Faded ink */
+  --text-faint: #A79D8C;    /* Ghost */
+  --accent: #53439B;        /* Ink violet */
+  --accent-hover: #453784;
+  --danger: #A83E2E;        /* Madder */
+  --status-success: #3E7A56; /* Verdigris */
+  --status-warn: #9A6B1F;    /* Ochre */
+  --spine-bg: #241F19;       /* Spine */
+  --spine-text: #EBE4D8;
+
+  /* Chat bubble tokens — re-derived from the palette */
+  --user-bubble-bg: #ECE7F8;
+  --user-bubble-text: #2A2547;
+  --assistant-bubble-bg: var(--surface);
+  --assistant-bubble-text: var(--text);
+
+  /* Legacy aliases kept so existing page CSS (code-bg, table-head, input-bg)
+     doesn't need a full rewrite in the same pass — map onto the new palette. */
+  --code-bg: var(--border);
+  --table-head: var(--surface);
+  --input-bg: var(--surface);
+}
+
+[data-theme="dark"] {
+  /* Dark — "Lamplight": warm black, not blue-black */
+  --bg: #171410;
+  --surface: #211D17;
+  --border: #373127;
+  --text: #EBE4D8;
+  --text-muted: #9A9082;
+  --text-faint: #6E665A;
+  --accent: #A79AE3;
+  --accent-hover: #BCB1EC;
+  --danger: #D06A59;
+  --status-success: #5FA97D;
+  --status-warn: #C99A4C;
+  --spine-bg: #100E0B;       /* darker than page, same relationship as light */
+  --spine-text: #EBE4D8;
+
+  --user-bubble-bg: #3A2F6B;
+  --user-bubble-text: #EDE8FA;
+  --assistant-bubble-bg: var(--surface);
+  --assistant-bubble-text: var(--text);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Shared table component (Documents, Users) ─────────────────────────
+   §4: one shared table pattern, identical header/row/status treatment. */
+.pp-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow-x: auto;
+}
+.pp-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.pp-table th {
+  text-align: left;
+  font-size: .8125rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: .625rem 1rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+}
+.pp-table td {
+  padding: .75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  color: var(--text);
+}
+.pp-table tr:last-child td { border-bottom: none; }
+.pp-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
+
+.pp-title a { color: var(--accent); text-decoration: none; font-weight: 500; }
+.pp-title a:hover { text-decoration: underline; }
+.pp-slug, .pp-mime { font: 13px ui-monospace, "Cascadia Mono", "SFMono-Regular", Consolas, monospace; color: var(--text-faint); }
+.pp-when { white-space: nowrap; color: var(--text-muted); font-size: .875rem; }
+
+.pp-status { font-size: .875rem; white-space: nowrap; }
+.pp-status .glyph { display: inline-block; width: 1.2em; }
+.pp-status.st-done { color: var(--status-success); }
+.pp-status.st-processing { color: var(--status-warn); }
+.pp-status.st-failed { color: var(--danger); font-weight: 600; }
+
+/* Row actions — recede until the row is hovered or focused (ghost by default) */
+.pp-actions { text-align: right; white-space: nowrap; }
+.pp-actions .pp-btn { opacity: .45; transition: opacity .12s ease, background .12s ease, color .12s ease; }
+.pp-table tbody tr:hover .pp-actions .pp-btn,
+.pp-actions .pp-btn:focus-visible { opacity: 1; }
+
+.pp-btn {
+  font: 500 13.5px/1 inherit;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 7px;
+  padding: 10px 12px;
+  min-height: 44px;
+  min-width: 44px;
+  background: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.pp-btn-quiet { color: var(--text-muted); border: 1px solid var(--border); }
+.pp-btn-quiet:hover { color: var(--text); border-color: var(--text-faint); }
+.pp-btn-danger { color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); margin-left: 6px; }
+.pp-btn-danger:hover { background: var(--danger); border-color: var(--danger); color: #fff; }
+.pp-btn-primary { background: var(--accent); color: #fff; border: none; }
+.pp-btn-primary:hover { background: var(--accent-hover); }
+.pp-btn[disabled] { opacity: .45; cursor: not-allowed; }
+
+.pp-chk input { accent-color: var(--accent); width: 15px; height: 15px; vertical-align: middle; }
+
+.pp-empty { text-align: center; padding: 3.5rem 1.5rem; }
+.pp-empty h2 { font-family: "Fraunces", Georgia, serif; font-weight: 560; font-size: 1.375rem; margin-bottom: .375rem; }
+.pp-empty p { color: var(--text-muted); }
+.pp-empty a { color: var(--accent); }

@@ -1,7 +1,12 @@
 (function () {
   function updateThemeIcon() {
-    const icon = document.getElementById('theme-icon');
-    if (icon) icon.textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+    const moon = document.getElementById('theme-icon-moon');
+    const sun = document.getElementById('theme-icon-sun');
+    if (!moon || !sun) return;
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    // Icon shown = action the button performs next (dark shows sun = "switch to light").
+    moon.style.display = isDark ? 'none' : '';
+    sun.style.display = isDark ? '' : 'none';
   }
 
   async function checkHealth() {
