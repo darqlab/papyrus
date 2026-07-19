@@ -148,6 +148,13 @@ public class ReingestOrchestrator {
             log.info("Enumerated {} archived source(s) from '{}' to reingest into '{}'.",
                     sources.size(), properties.db().sourceDatabase(), spec.databaseName());
 
+            Integer sourceLimit = properties.sourceLimit();
+            if (sourceLimit != null && sourceLimit > 0 && sources.size() > sourceLimit) {
+                sources = sources.subList(0, sourceLimit);
+                log.info("Capping this run to the first {} source(s) per ingestor.source-limit (SOURCE_LIMIT).",
+                        sourceLimit);
+            }
+
             UUID jobId = targetDbWriter.createJob(targetConn, sources.size());
             targetDbWriter.updateJobStatus(targetConn, jobId, "RUNNING");
 

@@ -25,6 +25,11 @@ ingestor:
   # Filesystem archive volume mount, read by the P1.3 reingest-from-archive loop.
   archive-path: ${ARCHIVE_PATH:/data/papyrus/archive}
 
+  # Optional cap on how many enumerated sources this run processes (first N, enumeration
+  # order). Unset/blank = no cap, process the full archive. Used for smoke-testing the
+  # ingestor against a couple of sources without committing to a full-corpus run.
+  source-limit: ${SOURCE_LIMIT:}
+
   # Voyage AI embedding credentials (P1.3) — same env vars as the serving app
   # (papyrus-api's papyrus.embedding.voyage.*), since c-ingestor is a separate process
   # that doesn't scan papyrus-pipeline's PapyrusProperties.

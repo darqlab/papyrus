@@ -87,6 +87,12 @@ class ReingestOrchestratorTest {
         return new ReingestOrchestrator(testProperties(), enumerator, writer);
     }
 
+    private ReingestOrchestrator orchestratorWithSourcesAndLimit(List<SourceRow> sources, int limit) throws Exception {
+        SourceEnumerator enumerator = mock(SourceEnumerator.class);
+        when(enumerator.enumerate(any())).thenReturn(sources);
+        return new ReingestOrchestrator(testProperties(limit), enumerator, writer);
+    }
+
     @Test
     void run_freshSources_writesDoneSourcesAndChunksAndReadyJob() throws Exception {
         when(archiveService.readExtractedText(any(), any())).thenReturn("Paragraph one.\n\nParagraph two.");
@@ -133,6 +139,29 @@ class ReingestOrchestratorTest {
 
         // readExtractedText / embed should only ever have been invoked for the first run's source.
         verify(archiveService, times(1)).readExtractedText(any(), any());
+    }
+
+    @Test
+    void run_withSourceLimit_capsToFirstNSourcesInEnumerationOrder() throws Exception {
+        when(archiveService.readExtractedText(any(), any())).thenReturn("Some archived text.");
+
+        SourceRow first = sourceRow("doc-f.pdf", "2024-01-06_doc-f", null);
+        SourceRow second = sourceRow("doc-g.pdf", "2024-01-07_doc-g", null);
+        SourceRow third = sourceRow("doc-h.pdf", "2024-01-08_doc-h", null);
+
+        orchestratorWithSourcesAndLimit(List.of(first, second, third), 1)
+                .run(spec(), archiveService, embeddingService, chunkingService);
+
+        assertEquals(1, writer.countAll(assertionConn), "only the first source (per the limit) should have a row");
+        assertEquals("DONE", writer.findStatus(assertionConn, first.id()).orElseThrow());
+        assertTrue(writer.findStatus(assertionConn, second.id()).isEmpty(), "second source should not have been processed");
+        assertTrue(writer.findStatus(assertionConn, third.id()).isEmpty(), "third source should not have been processed");
+
+        try (Statement st = assertionConn.createStatement()) {
+            var rs = st.executeQuery("SELECT total FROM ingestion_jobs");
+            assertTrue(rs.next());
+            assertEquals(1, rs.getInt("total"), "job total should reflect the capped count, not the full enumeration");
+        }
     }
 
     @Test
@@ -236,7 +265,14 @@ class ReingestOrchestratorTest {
         IngestorProperties.Db db = new IngestorProperties.Db(
                 postgres.getHost(), postgres.getFirstMappedPort(), postgres.getDatabaseName(),
                 postgres.getUsername(), postgres.getPassword(), postgres.getDatabaseName());
-        return new IngestorProperties("voyage-3-lite", db, "/unused-in-this-test", null);
+        return new IngestorProperties("voyage-3-lite", db, "/unused-in-this-test", null, null);
+    }
+
+    private IngestorProperties testProperties(int sourceLimit) {
+        IngestorProperties.Db db = new IngestorProperties.Db(
+                postgres.getHost(), postgres.getFirstMappedPort(), postgres.getDatabaseName(),
+                postgres.getUsername(), postgres.getPassword(), postgres.getDatabaseName());
+        return new IngestorProperties("voyage-3-lite", db, "/unused-in-this-test", null, sourceLimit);
     }
 
     private SourceRow sourceRow(String filename, String archiveFilename, UUID archiveSourceId) {
