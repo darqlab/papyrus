@@ -13,6 +13,8 @@ on:
 env:
   API_IMAGE: dennisarq/papyrus-api
   MCP_IMAGE: dennisarq/papyrus-mcp
+  INGESTOR_IMAGE: dennisarq/papyrus-ingestor
+  INGESTOR_IMAGE: dennisarq/papyrus-ingestor
 
 jobs:
   build:
@@ -98,5 +100,31 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.MCP_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ── Ingestor image (batch reingest tool, ADR-009) ───────────────────
+
+      - name: Build and push Ingestor :staging
+        if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.ingestor
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.INGESTOR_IMAGE }}:staging
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Ingestor :latest
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.ingestor
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.INGESTOR_IMAGE }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
