@@ -1,0 +1,43 @@
+# c-ingestor (ADR-009) — on-demand batch reingest CLI. Off by default; started manually
+# for a model switch. See development/reingest/reingest-model-switch-ip.md.
+
+ingestor:
+  # The embedding model to build a fresh papyrus_<model> database for. Must be a key in
+  # TargetModelResolver's registry (naming contract, ADR-009). Only 'voyage-3-lite' has a
+  # working EmbeddingService today.
+  target-model: ${TARGET_MODEL:voyage-3-lite}
+
+  db:
+    # Postgres server connection (same server as the serving app's DB, different database).
+    host: ${INGESTOR_DB_HOST:papyrus-pgvector}
+    port: ${INGESTOR_DB_PORT:5432}
+    # Server's default/admin database, used for CREATE DATABASE / pg_database checks.
+    admin-database: ${INGESTOR_DB_ADMIN_DATABASE:postgres}
+    # Deliberately separate from the serving app's DATABASE_USER/DATABASE_PASSWORD — this
+    # tool needs CREATE DATABASE privilege, the serving app does not.
+    admin-user: ${INGESTOR_DB_ADMIN_USER:papyrus}
+    admin-password: ${INGESTOR_DB_ADMIN_PASSWORD:}
+    # The live/serving app's database name (same Postgres server as above). Read-only
+    # enumerated by the P1.3 reingest loop to discover document_sources rows to rebuild.
+    # Default matches ${POSTGRES_DB:-papyrus} in docker-compose.yml.
+    source-database: ${INGESTOR_SOURCE_DATABASE:papyrus}
+
+  # Filesystem archive volume mount, read by the P1.3 reingest-from-archive loop.
+  archive-path: ${ARCHIVE_PATH:/data/papyrus/archive}
+
+  # Optional cap on how many enumerated sources this run processes (first N, enumeration
+  # order). Unset/blank = no cap, process the full archive. Used for smoke-testing the
+  # ingestor against a couple of sources without committing to a full-corpus run.
+  source-limit: ${SOURCE_LIMIT:}
+
+  # Voyage AI embedding credentials (P1.3) — same env vars as the serving app
+  # (papyrus-api's papyrus.embedding.voyage.*), since c-ingestor is a separate process
+  # that doesn't scan papyrus-pipeline's PapyrusProperties.
+  voyage:
+    api-key: ${VOYAGE_API_KEY:}
+    model: ${VOYAGE_MODEL:voyage-3-lite}
+
+logging:
+  level:
+    io.darqlab.papyrus.ingestor: INFO
+    org.flywaydb: INFO

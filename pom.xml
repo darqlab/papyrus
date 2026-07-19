@@ -25,6 +25,7 @@
         <module>papyrus-mcp</module>
         <module>papyrus-api</module>
         <module>papyrus-ui</module>
+        <module>papyrus-ingestor</module>
     </modules>
 
     <properties>

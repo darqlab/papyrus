@@ -6,6 +6,11 @@
 #   docker compose -f docker-compose.local.yml up -d --build
 #   docker compose -f docker-compose.local.yml up -d --build papyrus-api   # rebuild one service
 #   docker compose -f docker-compose.local.yml down
+#
+# c-ingestor (on-demand embedding-model reingest, ADR-009) is off by default — it only
+# starts when the "reingest" profile is explicitly requested, and runs once to completion:
+#   TARGET_MODEL=voyage-3-lite docker compose --profile reingest up --build papyrus-ingestor
+#   docker compose --profile reingest run --rm papyrus-ingestor   # alternative, auto-removes on exit
 
 services:
 
@@ -73,6 +78,30 @@ services:
       timeout: 5s
       retries: 3
       start_period: 60s
+    networks:
+      - papyrus-db
+
+  papyrus-ingestor:
+    profiles: ["reingest"]
+    build:
+      context: .
+      dockerfile: Dockerfile.ingestor
+    container_name: papyrus-ingestor
+    restart: "no"
+    environment:
+      TARGET_MODEL:               ${TARGET_MODEL:-voyage-3-lite}
+      INGESTOR_DB_HOST:           papyrus-pgvector
+      INGESTOR_DB_PORT:           5432
+      INGESTOR_DB_ADMIN_DATABASE: ${INGESTOR_DB_ADMIN_DATABASE:-postgres}
+      INGESTOR_DB_ADMIN_USER:     ${POSTGRES_USER:-papyrus}
+      INGESTOR_DB_ADMIN_PASSWORD: ${POSTGRES_PASSWORD:-papyrus}
+      INGESTOR_SOURCE_DATABASE:   ${POSTGRES_DB:-papyrus}
+      ARCHIVE_PATH:               /data/papyrus/archive
+      VOYAGE_API_KEY:             ${VOYAGE_API_KEY}
+      VOYAGE_MODEL:               ${VOYAGE_MODEL:-voyage-3-lite}
+      TZ: Asia/Manila
+    volumes:
+      - ./volumes/archive:/data/papyrus/archive:ro
     networks:
       - papyrus-db
 

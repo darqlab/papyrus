@@ -119,7 +119,20 @@
       gap: 1rem;
       flex-wrap: wrap;
     }
-    #header h1 { font-size: 1.1rem; font-weight: 700; flex: 1; color: var(--text); }
+    #header h1 { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    #header-titles { flex: 1; min-width: 0; }
+    #model-info {
+      font-size: .78rem;
+      color: var(--text-muted);
+      margin-top: .15rem;
+    }
+    #model-info code {
+      background: var(--code-bg);
+      color: var(--text);
+      padding: .05rem .35rem;
+      border-radius: 4px;
+      font-size: .78rem;
+    }
 
     #header-actions {
       display: flex;
@@ -305,7 +318,10 @@
 <div id="main">
 
   <div id="header">
-    <h1>Archive Manager</h1>
+    <div id="header-titles">
+      <h1>Archive Manager</h1>
+      <div id="model-info">Active embedding model: …</div>
+    </div>
     <div id="header-actions">
       <span id="sel-count" style="font-size:.85rem;color:#6b7280;display:none"></span>
       <button class="btn btn-primary" id="reingest-sel-btn" disabled onclick="reingestSelected()">Re-ingest selected</button>
@@ -623,8 +639,26 @@
     }
   }
 
+  // ── Embedding model ──────────────────────────────────────────────
+  async function loadModelInfo() {
+    const el = document.getElementById('model-info');
+    try {
+      const r = await fetch('/api/embedding-model');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const info = await r.json();
+      const dim = info.dimensions != null ? info.dimensions : '?';
+      el.innerHTML = `Active embedding model: <code>${esc(info.model)}</code> (${esc(String(dim))}) — DB <code>${esc(info.database)}</code>`;
+      if (info.matched === false) {
+        el.title = 'Database name is not in the papyrus_<model> naming contract yet; model/dimensions shown are the configured fallback.';
+      }
+    } catch (e) {
+      el.textContent = 'Active embedding model: unavailable';
+    }
+  }
+
   // ── Init ─────────────────────────────────────────────────────────
   checkHealth();
+  loadModelInfo();
   loadDocuments();
   updateThemeIcon();
   (async function applyNavRoles() {
