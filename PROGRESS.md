@@ -456,6 +456,70 @@ Fixed correctness issues in the MCP server's OAuth discovery endpoints and remov
 
 ---
 
+## UI Reskin — "Reading Room" (branch `feat/ui-reskin`) 🟡
+
+**Started/implemented:** 2026-07-17 (worktree `/home/dennis/Projects/papyrus-worktrees/ui-reskin`)
+
+### What was built
+
+Full visual reskin per `devops/projects/papyrus/development/design-brief.md` (v1.1) — moves the UI from
+generic dark-default SaaS with per-page color drift to a "quiet digital reading room" (ink on paper,
+Fraunces display serif, ink-violet accent). Structural change: ADR-008 (Manage merged into Documents,
+role-gated) implemented in the same pass.
+
+- **Foundation:** self-hosted Fraunces variable woff2 (`static/fonts/fraunces-var-latin.woff2`, latin
+  subset, weight 300–700, no CDN dependency); new shared `static/tokens.css` (single source of truth for
+  light "Paper" + dark "Lamplight" tokens, replacing per-page duplicated `:root` blocks); light is now
+  the default theme (was dark); sidebar restyled as "the spine" (`--spine-bg`, consistent Lucide-style
+  line icons, nav trimmed to Chat/Ingest/Documents/Users); emoji theme toggle (☀️/🌙) replaced with SVG
+  sun/moon icons.
+- **Documents (absorbs Manage, ADR-008):** single `documents.html` template. READER sees title/status/
+  ingested date; ADMIN additionally sees checkbox column, type filter, Re-ingest/Re-ingest selected,
+  Delete. `manage.html` deleted; `/manage` redirects to `/documents`.
+- **Chat (signature screen):** 760px reading measure, Fraunces drop cap on the first paragraph of each
+  real assistant answer (not the greeting), source citations restyled from a collapsible panel into
+  footnotes (hairline rule + numbered entries), empty state now shows a real corpus count + 3 example
+  questions drawn from actually-ingested document titles, placeholder → "Ask your library…".
+  Backend SSE event contract (`sources`/`usage`/`done`) unchanged.
+- **Ingest:** native file input replaced with a real drop zone (dashed border, accent on dragover, same
+  underlying drag/drop handlers restyled onto the zone instead of a full-page overlay); stepper adopts
+  the accent token; chunking options stay collapsed/faint.
+- **Users:** now uses the same shared table component as Documents; "+ Invite user" is the only
+  accent-filled control on the page.
+- **Cross-cutting:** 44×44px minimum hit targets on row actions, visible focus rings everywhere
+  (`:focus-visible` in `tokens.css`), `prefers-reduced-motion` respected globally, sentence-case
+  microcopy sweep, no emoji, no hardcoded per-page accent colors remaining outside the token set.
+
+### Deviations from the brief / ADR found during implementation
+
+- **RBAC:** design-brief.md §9 and ADR-008 assumed CONTRIBUTOR+ADMIN could both re-ingest/delete
+  documents. The real backend (`DocumentController`) restricts `DELETE /api/documents/{id}` and
+  `POST /api/documents/{id}/reingest` to `@PreAuthorize("hasRole('ADMIN')")` only. The UI was gated to
+  **ADMIN only** to match the actual server-side RBAC — flagged in ADR-008 v1.1 for a follow-up decision
+  (loosen the backend, or correct the brief's wording).
+- **Delete confirm copy:** the brief's example ("...and its 214 chunks...") assumes a chunk-count field
+  that does not exist on `GET /api/documents`. Chunk count omitted from the confirm copy rather than
+  invented; noted as a backend gap.
+- **Corpus count (Chat empty state):** no dedicated corpus-count endpoint exists; `GET /api/documents?
+  limit=500` is used and will undercount past 500 documents. Noted in-code as a backend TODO, not
+  blocking for this pass.
+
+### Test / build results
+
+| Step | Result |
+|------|--------|
+| `mvn -pl papyrus-api -am compile -DskipTests` | ✅ Compiles clean |
+| Docker build / `docker compose up` | ⬜ Not run — out of scope for this pass |
+| Staging smoke test (both themes, all 4 screens) | ⬜ **Not done** — no staging environment reachable from the implementation session; still pending before merge |
+
+### Status
+
+Implementation of Phases 1–6 (`tm-ui-reskin.md`) complete on `feat/ui-reskin`, committed locally in the
+worktree, **not pushed, no PR opened** — awaiting Dennis's review of the diff. Phase 7 checkpoint is
+partial: 7.1 (local compile only, no deploy), 7.2 (staging smoke test) still pending.
+
+---
+
 ## Pending
 
 | # | Scope | Status |
