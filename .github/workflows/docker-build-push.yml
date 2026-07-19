@@ -33,7 +33,7 @@ jobs:
           cache: 'maven'
 
       - name: Build JARs with Maven
-        run: mvn -pl papyrus-core,papyrus-extractor,papyrus-pipeline,papyrus-api,papyrus-mcp install -DskipTests -q
+        run: mvn -pl papyrus-core,papyrus-extractor,papyrus-pipeline,papyrus-api,papyrus-mcp,papyrus-ingestor install -DskipTests -q
 
       - name: Log in to Docker Hub
         if: github.event_name == 'push'
