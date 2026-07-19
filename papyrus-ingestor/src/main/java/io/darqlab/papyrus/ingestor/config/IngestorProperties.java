@@ -21,13 +21,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *                     papyrus-pipeline's {@code PapyrusProperties.EmbeddingProperties} since
  *                     this module doesn't scan that package; same underlying env vars
  *                     ({@code VOYAGE_API_KEY} / {@code VOYAGE_MODEL}) as the serving app.
+ * @param sourceLimit  {@code SOURCE_LIMIT} — optional cap on how many enumerated sources a
+ *                     run processes (first N, enumeration order). {@code null} = no cap,
+ *                     process the full archive. For smoke-testing against a couple of
+ *                     sources without a full-corpus run.
  */
 @ConfigurationProperties(prefix = "ingestor")
 public record IngestorProperties(
         String targetModel,
         Db db,
         String archivePath,
-        Voyage voyage
+        Voyage voyage,
+        Integer sourceLimit
 ) {
 
     /**
