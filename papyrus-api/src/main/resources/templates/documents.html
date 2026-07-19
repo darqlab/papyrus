@@ -8,13 +8,14 @@
   <title>Papyrus — Documents</title>
   <!--
     ADR-008: Manage merged into Documents (role-gated single page).
-    READER sees title / status / ingested date only.
-    CONTRIBUTOR/ADMIN additionally see: checkbox column, type filter, Re-ingest /
-    Re-ingest selected, Delete.
-    Deviation from the brief: the API's real RBAC restricts DELETE and
-    POST /api/documents/{id}/reingest to ROLE_ADMIN only (not CONTRIBUTOR+ADMIN as
-    design-brief.md §9 assumed) — the UI gates these to ADMIN to match the
-    server-side @PreAuthorize, which stays authoritative regardless.
+    READER sees title / ingested date only.
+    CONTRIBUTOR/ADMIN additionally see: type filter, Delete.
+    Re-ingest (single + bulk) removed from this page's UI; the API endpoint
+    (POST /api/documents/{id}/reingest) still exists and is untouched.
+    Deviation from the brief: the API's real RBAC restricts DELETE to
+    ROLE_ADMIN only (not CONTRIBUTOR+ADMIN as design-brief.md §9 assumed) —
+    the UI gates it to ADMIN to match the server-side @PreAuthorize, which
+    stays authoritative regardless.
     Delete confirm copy omits the chunk count from the brief's example (§8) because
     no chunk-count field exists on GET /api/documents — noted as a backend gap.
   -->
@@ -34,7 +35,28 @@
     .pp-toolbar input::placeholder { color: var(--text-faint); }
     .pp-toolbar input:focus { border-color: var(--accent); outline: none; }
     .pp-toolbar select { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .5625rem .625rem; }
-    .pp-toolbar .pp-bulk { margin-left: auto; }
+
+    /* Fixed layout + per-column widths so long filenames/titles ellipsize
+       instead of forcing the table wider than its container (no horizontal scrollbar). */
+    #pp-table { table-layout: fixed; }
+    #pp-table col.col-title  { width: 36%; }
+    #pp-table col.col-file   { width: 28%; }
+    #pp-table col.col-type   { width: 11%; }
+    #pp-table col.col-when   { width: 17%; }
+    #pp-table col.col-actions { width: 8%; }
+    #pp-table td.pp-title, #pp-table td.pp-slug {
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    #pp-table td.pp-title a { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+
+    .pp-pagination { display: flex; align-items: center; justify-content: center; gap: .75rem; margin-top: 1rem; }
+    .pp-pagination button {
+      font: 500 13.5px/1 inherit; cursor: pointer; border-radius: 7px; padding: .5rem .75rem;
+      background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    }
+    .pp-pagination button:disabled { opacity: .45; cursor: not-allowed; }
+    .pp-pagination button:not(:disabled):hover { border-color: var(--text-faint); }
+    .pp-pagination span { font-size: .875rem; color: var(--text-muted); }
 
     .pp-toast-area { position: fixed; bottom: 1.5rem; right: 1.5rem; display: flex; flex-direction: column; gap: .5rem; z-index: 100; }
     .pp-toast {
@@ -55,9 +77,9 @@
 
 <th:block layout:fragment="content">
 <!-- Server-rendered role marker: JS reads presence of this element to decide
-     whether to render the admin-only affordances (checkbox column, filters,
-     re-ingest, delete). Server-side @PreAuthorize on the API is authoritative;
-     this is cosmetic gating only, per ADR-008 risk mitigation. -->
+     whether to render the admin-only affordances (type filter, delete).
+     Server-side @PreAuthorize on the API is authoritative; this is cosmetic
+     gating only, per ADR-008 risk mitigation. -->
 <div id="pp-role-admin" sec:authorize="hasRole('ADMIN')" style="display:none"></div>
 
 <div class="pp-page">
@@ -76,24 +98,19 @@
       <option value="pptx">PPTX</option>
       <option value="other">Other</option>
     </select>
-    <select id="pp-filter-status" aria-label="Filter by status">
-      <option value="">All statuses</option>
-      <option value="DONE">Done</option>
-      <option value="PROCESSING">Processing</option>
-      <option value="FAILED">Failed</option>
-    </select>
-    <button class="pp-btn pp-btn-quiet pp-bulk" id="pp-reingest-selected" type="button" style="display:none" disabled>Re-ingest selected</button>
   </div>
 
   <div class="pp-card">
     <table class="pp-table" id="pp-table" style="display:none">
+      <colgroup>
+        <col class="col-title"><col class="col-file"><col class="col-type">
+        <col class="col-when"><col class="col-actions">
+      </colgroup>
       <thead>
         <tr id="pp-thead-row">
-          <th class="pp-chk" style="display:none"><input type="checkbox" id="pp-chk-all" aria-label="Select all"></th>
           <th>Title</th>
           <th>File</th>
           <th>Type</th>
-          <th>Status</th>
           <th>Ingested</th>
           <th></th>
         </tr>
@@ -101,6 +118,12 @@
       <tbody id="pp-tbody"></tbody>
     </table>
     <div class="pp-empty" id="pp-loading"><p>Loading…</p></div>
+  </div>
+
+  <div class="pp-pagination" id="pp-pagination" style="display:none">
+    <button type="button" id="pp-page-prev">Prev</button>
+    <span id="pp-page-label"></span>
+    <button type="button" id="pp-page-next">Next</button>
   </div>
 </div>
 
@@ -112,6 +135,8 @@
 
   let allDocs = [];
   let filtered = [];
+  let currentPage = 1;
+  const PAGE_SIZE = 20;
   const IMAGE_TYPES = ['image/png','image/jpeg','image/jpg','image/tiff','image/bmp','image/gif'];
 
   function esc(s) {
@@ -161,15 +186,6 @@
     return `${date} · ${time}`;
   }
 
-  function statusCell(status) {
-    // DONE collapses to a quiet check + verdigris text; FAILED/PROCESSING keep
-    // icon + color — status never conveyed by color alone (design-brief.md §6, §10).
-    if (status === 'DONE') return `<span class="pp-status st-done"><span class="glyph">✓</span>Done</span>`;
-    if (status === 'FAILED') return `<span class="pp-status st-failed"><span class="glyph">✕</span>Failed</span>`;
-    if (status === 'PROCESSING') return `<span class="pp-status st-processing"><span class="glyph">◌</span>Processing</span>`;
-    return `<span class="pp-status">${esc(status)}</span>`;
-  }
-
   async function loadDocs() {
     document.getElementById('pp-loading').innerHTML = '<p>Loading…</p>';
     document.getElementById('pp-loading').style.display = '';
@@ -185,11 +201,9 @@
 
   function applyFilter() {
     const search = document.getElementById('pp-filter-search').value.toLowerCase();
-    const status = document.getElementById('pp-filter-status').value;
     const type = isAdmin ? document.getElementById('pp-filter-type').value : '';
 
     filtered = allDocs.filter(d => {
-      if (status && d.status !== status) return false;
       if (type && fileTypeCategory(d.contentType) !== type) return false;
       if (search) {
         const hay = (d.filename + ' ' + formatTitle(d)).toLowerCase();
@@ -200,7 +214,22 @@
 
     document.getElementById('pp-count').textContent =
       `${filtered.length} of ${allDocs.length} document${allDocs.length !== 1 ? 's' : ''}`;
+    currentPage = 1;
     render();
+  }
+
+  function totalPages() {
+    return Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  }
+
+  function renderPagination() {
+    const nav = document.getElementById('pp-pagination');
+    if (filtered.length === 0) { nav.style.display = 'none'; return; }
+    const pages = totalPages();
+    nav.style.display = pages > 1 ? '' : 'none';
+    document.getElementById('pp-page-label').textContent = `Page ${currentPage} of ${pages}`;
+    document.getElementById('pp-page-prev').disabled = currentPage <= 1;
+    document.getElementById('pp-page-next').disabled = currentPage >= pages;
   }
 
   function render() {
@@ -212,67 +241,63 @@
       table.style.display = 'none';
       loading.style.display = '';
       loading.innerHTML = '<h2>Nothing ingested yet.</h2><p>Add your first document from the <a href="/ingest">Ingest</a> page.</p>';
+      document.getElementById('pp-pagination').style.display = 'none';
       return;
     }
     if (filtered.length === 0) {
       table.style.display = 'none';
       loading.style.display = '';
       loading.innerHTML = '<p>No documents match the filter.</p>';
+      document.getElementById('pp-pagination').style.display = 'none';
       return;
     }
 
     loading.style.display = 'none';
     table.style.display = '';
 
-    tbody.innerHTML = filtered.map(d => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const pageDocs = filtered.slice(start, start + PAGE_SIZE);
+
+    tbody.innerHTML = pageDocs.map(d => {
       const title = esc(formatTitle(d));
-      const canReingest = isAdmin && !!d.archiveFilename;
       const fileUrl = d.archiveFilename ? `/api/documents/${d.id}/file` : null;
 
       const titleCell = fileUrl
-        ? `<a href="${fileUrl}" target="_blank" rel="noopener">${title}</a>`
+        ? `<a href="${fileUrl}" target="_blank" rel="noopener" title="${title}">${title}</a>`
         : title;
 
-      const actions = isAdmin ? `
-        <button class="pp-btn pp-btn-quiet" type="button" ${canReingest ? '' : 'disabled'} onclick="reingestOne('${d.id}', '${title.replace(/'/g,"\\'")}')">Re-ingest</button>
-        <button class="pp-btn pp-btn-danger" type="button" onclick="confirmDelete('${d.id}', '${title.replace(/'/g,"\\'")}')">Delete</button>
-      ` : '';
+      const actions = isAdmin
+        ? `<button class="pp-btn pp-btn-danger" type="button" onclick="confirmDelete('${d.id}', '${title.replace(/'/g,"\\'")}')">Delete</button>`
+        : '';
 
       return `<tr data-id="${d.id}">
-        ${isAdmin ? `<td class="pp-chk"><input type="checkbox" class="pp-row-chk" data-id="${d.id}" ${canReingest ? '' : 'disabled'} aria-label="Select ${title}" onchange="updateSelCount()"></td>` : ''}
-        <td class="pp-title">${titleCell}</td>
-        <td class="pp-slug">${esc(d.filename)}</td>
+        <td class="pp-title" title="${title}">${titleCell}</td>
+        <td class="pp-slug" title="${esc(d.filename)}">${esc(d.filename)}</td>
         <td class="pp-mime">${esc(fileTypeLabel(d.contentType, d.filename))}</td>
-        <td>${statusCell(d.status)}</td>
         <td class="pp-when">${formatWhen(d.createdAt)}</td>
         <td class="pp-actions">${actions}</td>
       </tr>`;
     }).join('');
+
+    renderPagination();
   }
 
   // ── Role-gated setup ──────────────────────────────────────────────
   if (isAdmin) {
-    document.querySelectorAll('.pp-chk').forEach(el => el.style.display = '');
     document.getElementById('pp-filter-type').style.display = '';
-    document.getElementById('pp-reingest-selected').style.display = '';
   }
 
   document.getElementById('pp-filter-search').addEventListener('input', applyFilter);
-  document.getElementById('pp-filter-status').addEventListener('change', applyFilter);
   if (isAdmin) {
     document.getElementById('pp-filter-type').addEventListener('change', applyFilter);
-    document.getElementById('pp-chk-all').addEventListener('change', function () {
-      document.querySelectorAll('.pp-row-chk:not(:disabled)').forEach(c => c.checked = this.checked);
-      updateSelCount();
-    });
-    document.getElementById('pp-reingest-selected').addEventListener('click', reingestSelected);
   }
 
-  function updateSelCount() {
-    const selected = [...document.querySelectorAll('.pp-row-chk:checked')];
-    const btn = document.getElementById('pp-reingest-selected');
-    if (btn) btn.disabled = selected.length === 0;
-  }
+  document.getElementById('pp-page-prev').addEventListener('click', () => {
+    if (currentPage > 1) { currentPage--; render(); }
+  });
+  document.getElementById('pp-page-next').addEventListener('click', () => {
+    if (currentPage < totalPages()) { currentPage++; render(); }
+  });
 
   // ── Delete (ADMIN only server-side; UI gated to match) ────────────
   function confirmDelete(id, title) {
@@ -294,54 +319,6 @@
     } catch (e) {
       showToast(`Network error: ${e.message}`, 'err');
     }
-  }
-
-  // ── Re-ingest ──────────────────────────────────────────────────────
-  async function reingestOne(id, title) {
-    try {
-      const res = await fetch(`/api/documents/${id}/reingest`, { method: 'POST' });
-      if (!res.ok) { showToast(`Re-ingest failed (${res.status})`, 'err'); return; }
-      const job = await res.json();
-      showToast(`Re-ingesting ${title}…`, 'run');
-      pollJob(job.jobId, title);
-    } catch (e) {
-      showToast(`Error: ${e.message}`, 'err');
-    }
-  }
-
-  async function reingestSelected() {
-    const ids = [...document.querySelectorAll('.pp-row-chk:checked')].map(c => c.dataset.id);
-    for (const id of ids) {
-      const doc = allDocs.find(d => d.id === id);
-      await reingestOne(id, doc ? formatTitle(doc) : id);
-      await new Promise(r => setTimeout(r, 150));
-    }
-    document.querySelectorAll('.pp-row-chk').forEach(c => c.checked = false);
-    document.getElementById('pp-chk-all').checked = false;
-    updateSelCount();
-  }
-
-  async function pollJob(jobId, title) {
-    let attempts = 0;
-    while (attempts++ < 120) {
-      await new Promise(r => setTimeout(r, 2000));
-      try {
-        const res = await fetch(`/api/jobs/${jobId}`);
-        if (!res.ok) continue;
-        const job = await res.json();
-        if (job.status === 'DONE') {
-          showToast(`Re-ingested: ${title}`, 'ok');
-          await loadDocs();
-          return;
-        }
-        if (job.status === 'FAILED') {
-          showToast(`Re-ingest failed: ${title}`, 'err');
-          await loadDocs();
-          return;
-        }
-      } catch (_) {}
-    }
-    showToast(`Re-ingest timed out: ${title}`, 'err');
   }
 
   function showToast(msg, type) {
