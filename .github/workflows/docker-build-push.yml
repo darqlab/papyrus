@@ -14,7 +14,6 @@ env:
   API_IMAGE: dennisarq/papyrus-api
   MCP_IMAGE: dennisarq/papyrus-mcp
   INGESTOR_IMAGE: dennisarq/papyrus-ingestor
-  INGESTOR_IMAGE: dennisarq/papyrus-ingestor
 
 jobs:
   build:
