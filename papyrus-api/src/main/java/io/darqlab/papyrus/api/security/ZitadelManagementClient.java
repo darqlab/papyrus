@@ -1,16 +1,21 @@
 package io.darqlab.papyrus.api.security;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Component
 public class ZitadelManagementClient {
+
+    private static final Logger log = LoggerFactory.getLogger(ZitadelManagementClient.class);
 
     private final RestClient restClient = RestClient.create();
     private final ZitadelManagementTokenProvider tokenProvider;
@@ -39,10 +44,50 @@ public class ZitadelManagementClient {
         Map<String, Object> response = post("/management/v1/users/grants/_search", body);
         List<Map<String, Object>> result = (List<Map<String, Object>>) response.getOrDefault("result", List.of());
 
+        Map<String, Instant> lastLogins = fetchLastLogins();
+
         return result.stream()
                 .filter(g -> !"TYPE_MACHINE".equals(g.get("userType")))
-                .map(this::toZitadelUser)
+                .map(g -> toZitadelUser(g, lastLogins))
                 .toList();
+    }
+
+    /** Reconstructs last-login timestamps from the instance Admin Events API, since neither the
+     *  v1 grants search nor the v2 user search expose a lastLogin field. Requires the service
+     *  account to hold the instance-level IAM_OWNER_VIEWER role (or higher) — falls back to an
+     *  empty map (no last-login data, not a broken user list) if that role is missing or the
+     *  call otherwise fails. */
+    @SuppressWarnings("unchecked")
+    private Map<String, Instant> fetchLastLogins() {
+        Map<String, Object> body = Map.of(
+                "asc", false,
+                "eventTypes", List.of("user.human.password.check.succeeded"),
+                "aggregateTypes", List.of("user"),
+                "limit", 500
+        );
+
+        Map<String, Object> response;
+        try {
+            response = post("/admin/v1/events/_search", body);
+        } catch (Exception e) {
+            log.warn("Failed to fetch last-login events from Zitadel; last-login column will be empty", e);
+            return Map.of();
+        }
+
+        List<Map<String, Object>> events = (List<Map<String, Object>>) response.getOrDefault("events", List.of());
+        Map<String, Instant> lastLogins = new HashMap<>();
+        for (Map<String, Object> event : events) {
+            Map<String, Object> aggregate = (Map<String, Object>) event.get("aggregate");
+            if (aggregate == null) continue;
+            String userId = (String) aggregate.get("id");
+            if (userId == null || lastLogins.containsKey(userId)) continue; // events are newest-first: keep the first hit per user
+
+            Object creationDate = event.get("creationDate");
+            if (creationDate instanceof String s) {
+                try { lastLogins.put(userId, Instant.parse(s)); } catch (Exception ignored) {}
+            }
+        }
+        return lastLogins;
     }
 
     // ── Invite ───────────────────────────────────────────────────────────────
@@ -185,7 +230,7 @@ public class ZitadelManagementClient {
     // ── Mapping ───────────────────────────────────────────────────────────────
 
     @SuppressWarnings("unchecked")
-    private ZitadelUser toZitadelUser(Map<String, Object> grant) {
+    private ZitadelUser toZitadelUser(Map<String, Object> grant, Map<String, Instant> lastLogins) {
         String grantId     = (String) grant.get("id");
         String userId      = (String) grant.get("userId");
         String displayName = (String) grant.getOrDefault("displayName", "");
@@ -200,10 +245,7 @@ public class ZitadelManagementClient {
             try { createdAt = Instant.parse(s); } catch (Exception ignored) {}
         }
 
-        Instant lastLogin = null;
-        if (grant.get("lastLogin") instanceof String s) {
-            try { lastLogin = Instant.parse(s); } catch (Exception ignored) {}
-        }
+        Instant lastLogin = lastLogins.get(userId);
 
         return new ZitadelUser(userId, displayName, email, role, grantId, createdAt, lastLogin);
     }
