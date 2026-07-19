@@ -14,6 +14,7 @@ import io.darqlab.papyrus.pipeline.config.PapyrusProperties;
 import io.darqlab.papyrus.pipeline.embedding.VoyageAiEmbeddingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.sql.Connection;
@@ -102,6 +103,7 @@ public class ReingestOrchestrator {
     private final SourceEnumerator sourceEnumerator;
     private final TargetDbWriter targetDbWriter;
 
+    @Autowired
     public ReingestOrchestrator(IngestorProperties properties) {
         this(properties, new SourceEnumerator(), new TargetDbWriter());
     }
