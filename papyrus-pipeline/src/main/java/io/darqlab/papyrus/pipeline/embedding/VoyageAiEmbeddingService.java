@@ -3,9 +3,11 @@ package io.darqlab.papyrus.pipeline.embedding;
 import io.darqlab.papyrus.core.service.EmbeddingService;
 import io.darqlab.papyrus.pipeline.config.PapyrusProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -23,10 +25,20 @@ public class VoyageAiEmbeddingService implements EmbeddingService {
     public VoyageAiEmbeddingService(PapyrusProperties properties) {
         String apiKey = properties.embedding().voyage().apiKey();
         this.model    = properties.embedding().voyage().model();
+
+        // Dead/stalled TCP connections (e.g. a server-side reset that the client never
+        // observes) otherwise block indefinitely here: a batch reingest run stalled ~9min
+        // on a single embed() call with no read timeout, confirmed via thread dump parked
+        // in NioSocketImpl.timedRead.
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(10));
+        requestFactory.setReadTimeout(Duration.ofSeconds(60));
+
         this.restClient = RestClient.builder()
                 .baseUrl(VOYAGE_API_URL)
                 .defaultHeader("Authorization", "Bearer " + apiKey)
                 .defaultHeader("Content-Type", "application/json")
+                .requestFactory(requestFactory)
                 .build();
     }
 
